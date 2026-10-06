@@ -1,51 +1,143 @@
 ---
 name: code-review
-description: >-
-  Use this skill when the user asks to review code, check for bugs, audit
-  code quality, or evaluate recent changes. Covers correctness, edge cases,
-  performance, maintainability, and architectural adherence.
+description: Reviews movie-box frontend, backend, database and integration code for correctness, architecture, maintainability, performance and regressions. Use when reviewing code or recent changes.
 ---
 
 # Code Review Skill
 
-Review code systematically and produce actionable findings.
+Act as a senior full-stack engineer reviewing movie-box code.
+
+Do not modify the code unless explicitly asked.
+
+Focus on real problems that could cause bugs, security issues, regressions, poor UX or unnecessary complexity.
 
 ## Review Process
 
-1.  **Understand Scope** — Determine what to review: specific files, a
-    feature, recent changes, or the full codebase. Ask if unclear.
+### 1. Understand the Scope
 
-2.  **Read the Code** — Read every file in scope thoroughly. Do not skim.
+Determine:
 
-3.  **Evaluate Against These Criteria**
+- what feature/change is being reviewed
+- which files are affected
+- what behavior is expected
+- whether there is an architecture plan or requirement to compare against
 
-    | Category | What to Check |
-    |---|---|
-    | **Correctness** | Logic errors, wrong status codes, incorrect query/filter, missing `await`, broken control flow |
-    | **Edge Cases** | Null/undefined inputs, empty arrays, missing fields, duplicate entries, concurrent requests |
-    | **Error Handling** | Missing `ApiError` throws, unhandled promise rejections, generic error messages that leak info |
-    | **Architecture** | Violations of project patterns (e.g., try/catch in controllers instead of asyncHandler, direct API calls in controllers instead of services) |
-    | **Performance** | Missing DB indexes, N+1 queries, unbounded queries without pagination, large payloads without limits |
-    | **Maintainability** | Dead code, duplicated logic, overly complex functions, unclear naming, missing validation |
-    | **Regressions** | Changes that could break existing endpoints or alter response shapes relied upon by the frontend |
+Read the relevant code completely rather than reviewing isolated snippets.
 
-4.  **Produce Findings**
+### 2. Correctness
 
-    For each issue found, provide:
-    - **File & location** (file name and line range)
-    - **Severity**: `critical` | `warning` | `nitpick`
-    - **Problem**: One-sentence description
-    - **Suggestion**: Concrete fix (code snippet or specific instruction)
+Check:
 
-5.  **Summary**
-    - Count of findings by severity.
-    - Top recommendations prioritized by impact.
-    - If no issues found, explicitly state the code looks good and why.
+- incorrect business logic
+- broken control flow
+- incorrect API contracts
+- incorrect database queries
+- missing awaits
+- stale frontend state
+- incorrect routing
+- incorrect authentication behavior
+- incorrect error handling
+- inconsistent data transformations
 
-## Constraints
+### 3. Frontend Review
 
-- Do NOT fix the code yourself — only report findings. The user decides
-  whether to apply suggestions.
-- Do NOT report style preferences already handled by project rules
-  (e.g., "use const") unless they are actually violated.
-- Focus on real issues, not theoretical concerns with no practical impact.
+Check:
+
+- component responsibilities
+- state management
+- unnecessary re-renders
+- duplicated API calls
+- race conditions
+- loading/error/empty states
+- responsive behavior
+- accessibility basics
+- routing behavior
+- API integration
+- memory leaks and missing cleanup
+- unnecessary complexity
+
+### 4. Backend Review
+
+Check:
+
+- controller/service responsibilities
+- validation
+- authentication
+- authorization
+- error handling
+- API response consistency
+- database queries
+- indexes
+- pagination
+- external API handling
+- unnecessary database calls
+- concurrency/duplicate-request behavior
+
+### 5. Integration Review
+
+Check the complete flow:
+
+Frontend → API → middleware → controller → service → database/external API → response → frontend
+
+Look for mismatches between layers.
+
+### 6. Maintainability
+
+Check:
+
+- duplication
+- overly large functions/components
+- dead code
+- unclear naming
+- unnecessary abstractions
+- violations of established project patterns
+- changes that make future features harder to implement
+
+### 7. Performance
+
+Only flag meaningful performance issues, such as:
+
+- unbounded database queries
+- unnecessary API requests
+- N+1 patterns
+- excessive rendering
+- missing pagination
+- unnecessarily large payloads
+- avoidable expensive operations
+
+### 8. Regression Risk
+
+Consider whether the change could break:
+
+- existing routes
+- existing components
+- authentication
+- existing API response contracts
+- database data
+- navigation
+- existing user flows
+
+## Finding Format
+
+For every real issue:
+
+- **Severity:** Critical / High / Medium / Low
+- **Location:** file and relevant line/function
+- **Problem:** what is wrong
+- **Impact:** why it matters
+- **Recommendation:** concrete fix
+
+Do not report subjective preferences as bugs.
+
+Do not report theoretical issues without meaningful practical impact.
+
+## Final Output
+
+Provide:
+
+1. Findings ordered by severity
+2. Short explanation for each finding
+3. Overall assessment
+4. Top priority fixes
+
+If no meaningful issues are found, say so explicitly.

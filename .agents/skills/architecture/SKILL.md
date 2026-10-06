@@ -1,53 +1,165 @@
 ---
 name: architecture
-description: >-
-  Use this skill when the user needs to plan a new feature, design API
-  endpoints, define data models, decide data flow, or produce an
-  implementation plan before coding. Activate before any significant
-  development work begins.
+description: Designs implementation architecture for movie-box features across frontend, backend, database, APIs, authentication and external services. Use before implementing non-trivial features or when architectural decisions are required.
 ---
 
 # Architecture Skill
 
-Plan before you build. This skill produces a concrete implementation plan
-that the development skill can directly execute.
+Design the simplest architecture that correctly satisfies the requirement and fits the existing movie-box codebase.
+
+Do not write implementation code unless explicitly requested.
 
 ## Workflow
 
-1.  **Clarify Requirements**
-    - Ask targeted questions if the scope, user stories, or acceptance
-      criteria are ambiguous. Do not assume unstated requirements.
+### 1. Understand the Requirement
 
-2.  **Inspect the Existing Codebase**
-    - Read relevant models, controllers, routes, services, and middlewares.
-    - Identify existing patterns (ApiError/ApiResponse, asyncHandler,
-      service layer, middleware chain) and which pieces can be reused.
-    - Note the current Mongoose schemas, route prefixes, and auth flow.
+Identify:
 
-3.  **Design — Produce These Sections**
+- feature goal
+- user flow
+- functional requirements
+- affected user roles
+- inputs and outputs
+- acceptance criteria
+- important edge cases
 
-    | Section | What to Define |
-    |---|---|
-    | **Data Models** | Mongoose schema fields, types, indexes, refs, virtuals, pre/post hooks |
-    | **API Endpoints** | Method, path (`/api/v1/...`), auth requirement, request/response shape |
-    | **Data Flow** | Request → middleware → controller → service → DB/external API → response |
-    | **Frontend Components** | Component tree, state management approach, API integration points |
-    | **File Changes** | Exact files to create or modify, in which directory |
+If a major requirement is ambiguous, ask a targeted question instead of inventing behavior.
 
-4.  **Identify Risks & Decisions**
-    - Flag edge cases, performance concerns, security considerations, and
-      any design trade-offs that need the user's input.
+### 2. Inspect the Existing System
 
-5.  **Produce the Plan**
-    - Output a numbered, step-by-step implementation plan.
-    - Each step must map to a specific file and function.
-    - Mark steps as `[backend]` or `[frontend]`.
+Before designing anything:
+
+- inspect the relevant frontend structure
+- inspect relevant backend routes/controllers/services
+- inspect relevant models
+- inspect authentication/authorization
+- inspect existing API contracts
+- inspect existing reusable components/utilities
+
+Prefer extending existing patterns over introducing new ones.
+
+### 3. Design the Feature
+
+Consider all affected layers:
+
+#### Frontend
+- pages/routes
+- component hierarchy
+- reusable components
+- local/shared state
+- API integration
+- loading/error/empty states
+- responsive behavior
+- user interactions
+
+#### Backend
+- routes
+- controllers
+- services/business logic
+- middleware
+- validation
+- error handling
+- authorization
+
+#### Database
+- required collections/models
+- fields
+- relationships
+- indexes
+- uniqueness constraints
+- read/write patterns
+
+#### External Services
+If applicable:
+
+- TMDB
+- authentication providers
+- file storage
+- AI services
+- other third-party APIs
+
+Define where the integration belongs and how failures are handled.
+
+### 4. Define Data Flow
+
+Describe the relevant flow, for example:
+
+User action
+→ React component
+→ API layer
+→ Express route
+→ middleware
+→ controller
+→ service
+→ database/external API
+→ response
+→ UI state update
+
+Only include layers that are actually involved.
+
+### 5. Define Contracts
+
+For affected APIs specify:
+
+- method
+- path
+- authentication requirement
+- parameters/query/body
+- validation rules
+- response shape
+- important error cases
+
+For frontend/backend boundaries, make the contract explicit.
+
+### 6. Identify Changes
+
+List:
+
+- files/modules to create
+- files/modules to modify
+- database changes
+- dependencies, if any
+- environment changes, if any
+
+Do not force artificial file changes simply to satisfy a template.
+
+### 7. Evaluate Risks
+
+Check:
+
+- authorization
+- data ownership
+- race conditions
+- duplicate requests
+- pagination
+- external API failures
+- invalid input
+- performance
+- backwards compatibility
+- frontend UX failure states
+
+### 8. Produce the Plan
+
+Output:
+
+1. Requirement understanding
+2. Proposed approach
+3. Frontend design
+4. Backend design
+5. Database design
+6. API contracts
+7. Data flow
+8. Files/modules affected
+9. Edge cases and risks
+10. Ordered implementation steps
+
+Clearly label frontend/backend/database work where useful.
 
 ## Constraints
 
-- Do NOT write implementation code — only plan, schemas, and signatures.
-- Respect existing patterns; do not propose alternative utilities or
-  response formats unless there is a clear deficiency.
-- The plan must be complete enough that the development skill can execute
-  it without re-reading requirements.
-- When designing endpoints, include request body validation rules.
+- Prefer the simplest viable architecture.
+- Do not introduce microservices, repositories, factories or other abstractions without a concrete need.
+- Do not redesign unrelated parts of the application.
+- Do not duplicate existing utilities or patterns.
+- Do not assume a technology or feature exists simply because it appears in documentation.
+- The architecture must be implementable by the development skill without requiring major reinterpretation.
