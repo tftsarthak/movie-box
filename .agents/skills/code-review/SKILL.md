@@ -1,143 +1,40 @@
 ---
 name: code-review
-description: Reviews movie-box frontend, backend, database and integration code for correctness, architecture, maintainability, performance and regressions. Use when reviewing code or recent changes.
+description: Reviews movie-box changes across React, Express, MongoDB, APIs, and integrations for correctness, security, maintainability, performance, and regressions.
 ---
 
 # Code Review Skill
 
-Act as a senior full-stack engineer reviewing movie-box code.
+Act as a senior full-stack engineer reviewing movie-box code. All project-rules apply automatically.
 
-Do not modify the code unless explicitly asked.
+Do not modify code unless explicitly asked. Inspect changed files and surrounding code before forming conclusions. Focus on actionable issues — not subjective style preferences unless they violate a project rule.
 
-Focus on real problems that could cause bugs, security issues, regressions, poor UX or unnecessary complexity.
+## Review Focus
 
-## Review Process
-
-### 1. Understand the Scope
-
-Determine:
-
-- what feature/change is being reviewed
-- which files are affected
-- what behavior is expected
-- whether there is an architecture plan or requirement to compare against
-
-Read the relevant code completely rather than reviewing isolated snippets.
-
-### 2. Correctness
-
-Check:
-
-- incorrect business logic
-- broken control flow
-- incorrect API contracts
-- incorrect database queries
-- missing awaits
-- stale frontend state
-- incorrect routing
-- incorrect authentication behavior
-- incorrect error handling
-- inconsistent data transformations
-
-### 3. Frontend Review
-
-Check:
-
-- component responsibilities
-- state management
-- unnecessary re-renders
-- duplicated API calls
-- race conditions
-- loading/error/empty states
-- responsive behavior
-- accessibility basics
-- routing behavior
-- API integration
-- memory leaks and missing cleanup
-- unnecessary complexity
-
-### 4. Backend Review
-
-Check:
-
-- controller/service responsibilities
-- validation
-- authentication
-- authorization
-- error handling
-- API response consistency
-- database queries
-- indexes
-- pagination
-- external API handling
-- unnecessary database calls
-- concurrency/duplicate-request behavior
-
-### 5. Integration Review
-
-Check the complete flow:
-
-Frontend → API → middleware → controller → service → database/external API → response → frontend
-
-Look for mismatches between layers.
-
-### 6. Maintainability
-
-Check:
-
-- duplication
-- overly large functions/components
-- dead code
-- unclear naming
-- unnecessary abstractions
-- violations of established project patterns
-- changes that make future features harder to implement
-
-### 7. Performance
-
-Only flag meaningful performance issues, such as:
-
-- unbounded database queries
-- unnecessary API requests
-- N+1 patterns
-- excessive rendering
-- missing pagination
-- unnecessarily large payloads
-- avoidable expensive operations
-
-### 8. Regression Risk
-
-Consider whether the change could break:
-
-- existing routes
-- existing components
-- authentication
-- existing API response contracts
-- database data
-- navigation
-- existing user flows
+- **Correctness:** Async/await bugs, state races, broken API contracts, invalid queries, incorrect control flow, missing edge cases.
+- **Backend & Security:** Input validation, auth/authz, ownership checks, controller/service boundaries, error handling, unsafe data access, credential boundaries.
+- **Frontend:** State management errors, unnecessary re-renders, duplicate API calls, stale closures, missing UI states.
+- **Database:** Incorrect queries, missing indexes/constraints, inefficient access, unintended duplication, incorrect ownership relationships.
+- **Integration:** Trace `Frontend → API → Controller → Service → DB/TMDB → Response` for contract or data-flow mismatches.
+- **External APIs:** TMDB request handling, timeouts/failures, response assumptions, unnecessary upstream calls, incorrect error propagation.
+- **Performance & Regressions:** Unbounded queries, N+1, duplicate network calls, excessive payloads, breaking changes to existing contracts.
+- **Maintainability:** Unnecessary duplication, tight coupling, abstractions that add complexity without value.
 
 ## Finding Format
 
-For every real issue:
+For each confirmed issue:
+- **Severity:** Critical | High | Medium | Low
+- **Location:** `filepath:line_number`
+- **Problem:** What is wrong
+- **Impact:** Real-world consequence
+- **Fix:** Concrete recommendation
 
-- **Severity:** Critical / High / Medium / Low
-- **Location:** file and relevant line/function
-- **Problem:** what is wrong
-- **Impact:** why it matters
-- **Recommendation:** concrete fix
+Label anything unconfirmed as a potential concern.
 
-Do not report subjective preferences as bugs.
+## Output
 
-Do not report theoretical issues without meaningful practical impact.
+1. **Findings** ordered by severity
+2. **Overall Assessment** of quality and risk
+3. **Top Priority Fixes**
 
-## Final Output
-
-Provide:
-
-1. Findings ordered by severity
-2. Short explanation for each finding
-3. Overall assessment
-4. Top priority fixes
-
-If no meaningful issues are found, say so explicitly.
+State explicitly if no meaningful issues are found. Do not rewrite or implement fixes unless asked.
