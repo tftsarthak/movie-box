@@ -1,4 +1,3 @@
-import { useState } from "react";
 import { Link } from "react-router";
 import { Star } from "lucide-react";
 import { TMDB_IMAGE_BASE_URL, PLACEHOLDER_POSTER } from "@/lib/constants";
@@ -18,9 +17,9 @@ export const MovieCard = ({ movie, className = "" }) => {
       ? voteAverage.toFixed(1)
       : null;
 
-  const [imgSrc, setImgSrc] = useState(
-    posterPath ? `${TMDB_IMAGE_BASE_URL.poster}${posterPath}` : PLACEHOLDER_POSTER
-  );
+  const posterUrl = posterPath
+    ? `${TMDB_IMAGE_BASE_URL.poster}${posterPath}`
+    : PLACEHOLDER_POSTER;
 
   return (
     <Link
@@ -31,10 +30,13 @@ export const MovieCard = ({ movie, className = "" }) => {
       {/* Poster Image Container */}
       <div className="relative aspect-[2/3] w-full overflow-hidden rounded-xl bg-muted/40 border border-border/50 shadow-sm transition-all duration-300 group-hover:border-primary/50 group-hover:shadow-lg group-hover:shadow-primary/5">
         <img
-          src={imgSrc}
+          src={posterUrl}
           alt={title}
           loading="lazy"
-          onError={() => setImgSrc(PLACEHOLDER_POSTER)}
+          onError={(e) => {
+            e.currentTarget.onerror = null;
+            e.currentTarget.src = PLACEHOLDER_POSTER;
+          }}
           className="h-full w-full object-cover transition-transform duration-500 will-change-transform group-hover:scale-105"
         />
 

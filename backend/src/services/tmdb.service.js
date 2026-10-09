@@ -24,6 +24,8 @@ const tmdbFetch = async (path, params = {}) => {
             headers: {
                 Authorization: `Bearer ${process.env.TMDB_ACCESS_TOKEN}`,
                 "Content-Type": "application/json",
+                "User-Agent": "MovieBox/1.0",
+                Accept: "application/json",
             },
         });
     } catch {
