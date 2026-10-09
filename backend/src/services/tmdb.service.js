@@ -1,55 +1,6 @@
-import { ApiError } from "../utils/ApiError.js";
+import tmdbFetch from "../api/tmdbFetch.js"
 
-const TMDB_BASE_URL = "https://api.themoviedb.org/3";
-
-/**
- * Internal helper — all TMDB HTTP requests go through here.
- * Attaches the Bearer token, builds the URL, and maps TMDB errors to ApiError.
- */
-const tmdbFetch = async (path, params = {}) => {
-    if (!process.env.TMDB_ACCESS_TOKEN) {
-        throw new ApiError(500, "TMDB configuration error");
-    }
-
-    const url = new URL(`${TMDB_BASE_URL}${path}`);
-    Object.entries(params).forEach(([key, value]) => {
-        if (value !== undefined && value !== null) {
-            url.searchParams.set(key, value);
-        }
-    });
-
-    let response;
-    try {
-        response = await fetch(url, {
-            headers: {
-                Authorization: `Bearer ${process.env.TMDB_ACCESS_TOKEN}`,
-                "Content-Type": "application/json",
-            },
-        });
-    } catch {
-        throw new ApiError(502, "Failed to reach TMDB");
-    }
-
-    if (!response.ok) {
-        const body = await response.json().catch(() => ({}));
-
-        if (response.status === 404) {
-            throw new ApiError(404, "Movie not found");
-        }
-        if (response.status === 401) {
-            throw new ApiError(502, "TMDB authentication error");
-        }
-        if (response.status === 429) {
-            throw new ApiError(503, "Service temporarily unavailable");
-        }
-
-        throw new ApiError(502, body.status_message || "TMDB request failed");
-    }
-
-    return response.json();
-};
-
-// ─── Exported service functions ──────────────────────────────────────
+// ─── Movie Service Functions ──────────────────────────────────────────
 
 export const fetchTrendingMovies = async (timeWindow = "day", page = 1) => {
     return tmdbFetch(`/trending/movie/${timeWindow}`, { page });
@@ -83,4 +34,48 @@ export const fetchMovieCredits = async (tmdbId) => {
 
 export const fetchSimilarMovies = async (tmdbId, page = 1) => {
     return tmdbFetch(`/movie/${tmdbId}/similar`, { page });
+};
+
+// ─── TMDB Auth & Session Service Functions ────────────────────────────
+
+/**
+ * Create a new request token from TMDB v3 API.
+ */
+export const createRequestToken = async () => {
+    return tmdbFetch("/authentication/token/new");
+};
+
+/**
+ * Exchange an authorized request token for a TMDB session ID.
+ */
+export const createSession = async (requestToken) => {
+    try {
+        const { data } = await tmdbClient.post("/authentication/session/new", {
+            request_token: requestToken,
+        });
+        return data;
+    } catch (error) {
+        handleTmdbError(error, "Failed to create TMDB session");
+    }
+};
+
+/**
+ * Fetch authenticated user's TMDB account details using session ID.
+ */
+export const fetchAccountDetails = async (sessionId) => {
+    return tmdbFetch("/account", { session_id: sessionId });
+};
+
+/**
+ * Invalidate an active session ID on TMDB servers.
+ */
+export const deleteSession = async (sessionId) => {
+    try {
+        const { data } = await tmdbClient.delete("/authentication/session", {
+            data: { session_id: sessionId },
+        });
+        return data;
+    } catch (error) {
+        handleTmdbError(error, "Failed to delete TMDB session");
+    }
 };
