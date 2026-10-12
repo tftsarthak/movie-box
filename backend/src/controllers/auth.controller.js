@@ -36,17 +36,76 @@ export const initiateTmdbAuth = asyncHandler(async (req, res) => {
 
     const tmdbAuthUrl = `https://www.themoviedb.org/authenticate/${requestToken}?redirect_to=${encodeURIComponent(callbackUrl)}`;
 
-    if (req.query.redirect === "false") {
-        return res.status(200).json(new ApiResponse(200, { authUrl: tmdbAuthUrl }, "TMDB auth URL generated"));
+    /*
+When will the backend directly redirect?
+Whenever the request URL includes the query parameter ?redirect=true.
+*/
+
+    if (req.query.redirect === "true") {
+        return res.redirect(tmdbAuthUrl);
     }
 
-    return res.redirect(tmdbAuthUrl);
+/*
+When will you get the JSON ApiResponse?
+In all other cases — i.e., anytime ?redirect=true is not present in the URL.
+*/
+
+/*
+When the user clicks the button:
+
+React fetches the authUrl.
+window.location.href = res.data.data.authUrl immediately takes the real user to the TMDB website to approve access.
+Once approved, TMDB redirects the user back to your backend callback, which redirects to your dashboard.
+*/
+
+    return res.status(200).json(
+        new ApiResponse(
+            200,
+            {
+                request_token: requestToken,
+                authUrl: tmdbAuthUrl,
+            },
+            "TMDB request token generated successfully"
+        )
+    );
+
+/* 
+Do you need to extract authUrl and do a manual redirect from frontend?
+Yes, exactly! If your frontend uses axios or fetch, you must extract authUrl and redirect manually.
+
+Here is what your React code looks like:
+
+// In your React component
+import axios from "axios";
+
+const handleLogin = async () => {
+    try {
+        // 1. Call backend (no ?redirect=true -> returns JSON)
+        const res = await axios.get("http://localhost:3000/api/v1/auth/tmdb/login", {
+            withCredentials: true // Important: preserves the auth_state cookie
+        });
+
+        // 2. Extract authUrl from response
+        const { authUrl } = res.data.data;
+
+        // 3. Manually redirect the user's browser to TMDB
+        window.location.href = authUrl;
+
+    } catch (error) {
+        console.error("Login failed:", error);
+    }
+};
+
+*/
+
 });
 
 /**
  * STEP 2: Handle TMDB Callback & Exchange Token for Session ID
  * Route: GET /api/v1/auth/tmdb/callback
  */
+
+// iska kam h redirect karna if success - dashboard par, else - login page par with error message in query param
 export const handleTmdbCallback = asyncHandler(async (req, res) => {
     const { request_token: callbackToken, approved, denied } = req.query;
     const storedToken = req.cookies?.tmdb_auth_state;
@@ -78,6 +137,19 @@ export const handleTmdbCallback = asyncHandler(async (req, res) => {
             ...COOKIE_OPTIONS,
             maxAge: 30 * 24 * 60 * 60 * 1000,
         });
+
+        // Pre-fetch and cache account ID in cookie to avoid round-trips for account-scoped operations
+        try {
+            const account = await tmdbService.fetchAccountDetails(sessionId);
+            if (account?.id) {
+                res.cookie("tmdb_account_id", String(account.id), {
+                    ...COOKIE_OPTIONS,
+                    maxAge: 30 * 24 * 60 * 60 * 1000,
+                });
+            }
+        } catch (accErr) {
+            console.warn("Could not pre-fetch account ID during TMDB login callback:", accErr.message);
+        }
 
         return res.redirect(`${clientUrl}/dashboard`);
     } catch (error) {
@@ -122,6 +194,7 @@ export const logoutTmdb = asyncHandler(async (req, res) => {
     }
 
     res.clearCookie("tmdb_session_id", COOKIE_OPTIONS);
+    res.clearCookie("tmdb_account_id", COOKIE_OPTIONS);
     res.clearCookie("tmdb_auth_state", COOKIE_OPTIONS);
 
     if (req.method === "GET" && req.query.redirect === "true") {

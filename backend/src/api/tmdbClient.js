@@ -12,10 +12,12 @@ const tmdbClient = axios.create({
 });
 
 tmdbClient.interceptors.request.use((config) => {
-    if (!process.env.TMDB_ACCESS_TOKEN) {
-        throw new ApiError(500, "TMDB configuration error");
+    const rawToken = process.env.TMDB_ACCESS_TOKEN;
+    if (!rawToken) {
+        throw new ApiError(500, "TMDB configuration error: TMDB_ACCESS_TOKEN is missing");
     }
-    config.headers.Authorization = `Bearer ${process.env.TMDB_ACCESS_TOKEN}`;
+    const token = rawToken.trim().replace(/^["']|["']$/g, "");
+    config.headers.Authorization = `Bearer ${token}`;
     return config;
 });
 
