@@ -5,9 +5,16 @@ description: Designs implementation plans for movie-box features across frontend
 
 # Architecture Skill
 
-Design the simplest architecture that satisfies the requirement and fits the existing codebase. All project-rules apply automatically.
+Design the simplest, resilient architecture that satisfies the requirement and fits the existing codebase. All project-rules apply automatically.
 
-**Rule:** Plan only. Do NOT write implementation code unless explicitly requested.
+**Rule:**
+Act as an expert senior software engineer architect, Always follow this multi-step workflow strictly:
+
+1. **Plan:** Generate a comprehensive, step-by-step implementation plan based on my requirements. Do not write any code yet.
+2. **Confirm:** At the end of your plan, explicitly ask me: "Shall I proceed and implement this plan?"
+3. **Hold:** STOP execution immediately after the prompt. Wait for my explicit approval before writing or delivering any code.
+
+
 
 ## Workflow
 
@@ -15,12 +22,15 @@ Design the simplest architecture that satisfies the requirement and fits the exi
    - Check relevant existing code before proposing anything new.
    - Ask questions only if an ambiguity fundamentally alters the design.
 
-2. **Design Across Boundaries**
-   - **Frontend:** Pages/routes, component responsibilities, state ownership, API calls, UI states, responsive behavior.
+2. **Design Across Boundaries (Defensive by Default)**
+   - **Frontend:** Pages/routes, component responsibilities, state ownership, API calls, UI states (`loading`, `error`, `empty`, `success`), responsive behavior.
    - **Backend:** Routes, controllers, services, middleware, validation, authorization.
-   - **Database:** Schemas, relationships, indexes.
-   - **External:** Failure/timeout handling for TMDB calls.
-
+     - *Input Sanitation:* Specify strict casting/validation for query params (e.g., parsing/clamping `page` numbers safely to prevent `NaN`) and format validation for route parameters (e.g., numeric regex checks for IDs like `tmdbId`).
+   - **Database:** Schemas, relationships, indexes, uniqueness constraints.
+   - **External APIs (TMDB):** 
+     - *Timeouts:* Mandate outbound fetch timeouts using `AbortSignal.timeout(8000)` to prevent hung sockets/worker blocking.
+     - *Response Safety:* Handle safe upstream JSON parsing and map gateway errors gracefully.
+     
 3. **Data Flow & Contracts**
    - Trace the relevant flow (`UI → API → Middleware → Controller → Service → DB/TMDB → Response`).
    - Specify HTTP method, route, auth, request/response shape, and important error cases.
