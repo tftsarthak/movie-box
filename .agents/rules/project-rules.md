@@ -103,7 +103,7 @@ description: Core project rules, stack, architecture conventions, security bound
 - Pages orchestrate (data hooks), feature components render movie UI, shared UI stays generic.
 - No premature memoization: do not add `useMemo`/`useCallback`/`memo` without a clear re-render cost.
 
-## Backend Standards (only when the feature touches the backend)
+## Backend Standards
 
 - Reuse existing routes -> controllers -> services, error utilities, async wrapper, auth middleware, and TMDB service. Preserve existing response contracts.
 - **Scalability first:** stateless handlers; paginate every list with a clamped hard `limit` (cursor pagination for growing collections); an index serving every new query; no N+1 (`$in`, `populate` with `select`, bounded aggregation); chunk fan-out over user-controlled lists; atomic idempotent writes (`upsert`, `$addToSet`, unique index with `11000` handling, no check-then-insert).
