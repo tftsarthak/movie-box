@@ -8,6 +8,11 @@ trigger: always_on
 description: Core project rules, stack, architecture conventions, security boundaries, and coding standards for movie-box.
 ---
 
+---
+trigger: always_on
+description: Core project rules, stack, architecture conventions, security boundaries, and coding standards for movie-box.
+---
+
 # movie-box Project Rules
 
 ## Stack & Guardrails
