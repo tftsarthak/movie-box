@@ -5,8 +5,8 @@ import { SearchPage } from "@/pages/SearchPage";
 import { DiscoverPage } from "@/pages/DiscoverPage";
 import { MovieDetailPage } from "@/pages/MovieDetailPage";
 import { LoginPage } from "@/pages/LoginPage";
-import { SignupPage } from "@/pages/SignupPage";
 import { NotFoundPage } from "@/pages/NotFoundPage";
+import { DashboardPage } from "@/pages/DashboardPage";
 
 function App() {
   return (
@@ -18,7 +18,7 @@ function App() {
           <Route path="/discover" element={<DiscoverPage />} />
           <Route path="/movie/:tmdbId" element={<MovieDetailPage />} />
           <Route path="/login" element={<LoginPage />} />
-          <Route path="/signup" element={<SignupPage />} />
+          <Route path="/dashboard" element={<DashboardPage />} />
           <Route path="*" element={<NotFoundPage />} />
         </Route>
       </Routes>

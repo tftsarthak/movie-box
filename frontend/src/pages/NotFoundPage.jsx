@@ -12,7 +12,7 @@ export const NotFoundPage = () => {
         404
       </h1>
       <p className="text-base text-muted-foreground max-w-md mx-auto mb-8">
-        The reel you are looking for does not exist or has been moved to another projector.
+        The page you are looking for does not exist.
       </p>
       <Link to="/">
         <Button className="rounded-md bg-primary text-primary-foreground hover:bg-primary/90 text-xs font-semibold px-4 py-2">

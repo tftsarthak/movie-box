@@ -93,14 +93,11 @@ export const logoutTmdb = async (requestTokenOrOptions, options = {}) => {
     }
   }
 
+  const payload = token ? { request_token: token } : {};
   const config = {
     signal: opts.signal,
   };
 
-  if (token) {
-    config.data = { request_token: token };
-  }
-
-  const res = await apiClient.get("/auth/logout", config);
+  const res = await apiClient.post("/auth/logout", payload, config);
   return res.data ?? res;
 };

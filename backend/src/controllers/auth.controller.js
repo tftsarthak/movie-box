@@ -180,7 +180,7 @@ export const getTmdbAccount = asyncHandler(async (req, res) => {
 
 /**
  * STEP 4: Logout & Invalidate TMDB Session
- * Route: POST /api/v1/auth/logout (also supports GET /api/v1/auth/logout)
+ * Route: POST /api/v1/auth/logout
  */
 export const logoutTmdb = asyncHandler(async (req, res) => {
     const sessionId = req.cookies?.tmdb_session_id;
@@ -197,10 +197,6 @@ export const logoutTmdb = asyncHandler(async (req, res) => {
     res.clearCookie("tmdb_account_id", COOKIE_OPTIONS);
     res.clearCookie("tmdb_auth_state", COOKIE_OPTIONS);
 
-    if (req.method === "GET" && req.query.redirect === "true") {
-        const clientUrl = process.env.CLIENT_URL || process.env.CORS_ORIGIN || "http://localhost:5173";
-        return res.redirect(`${clientUrl}/login?status=logged_out`);
-    }
-
+    // Default for React / Axios API calls (react handles redirect)
     return res.status(200).json(new ApiResponse(200, null, "Logged out successfully"));
 });

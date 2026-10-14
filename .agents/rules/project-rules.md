@@ -78,6 +78,10 @@ description: Core project rules, stack, architecture conventions, security bound
 - Import from `react-router`. Follow the existing router style (data router vs declarative).
 - Nested routes with a layout and `<Outlet />`, a protected-route wrapper, a catch-all 404, and a route-level error element.
 - Lazy-load page components except the landing path.
+- SPAs expect the backend to:
+ - Clear HTTP-only session cookies.
+ - Return a JSON response (ApiResponse()).
+ - Let React update state, show a toast notification, and navigate via React Router.
 
 **API layer & data fetching (axios):**
 - One shared axios instance (baseURL from `import.meta.env`, timeout, interceptors for auth header, error normalization, central 401 handling) and per-resource API modules. Components never import axios or hard-code URLs.

@@ -66,19 +66,9 @@ export const Navbar = () => {
             <Button
               variant="ghost"
               size="sm"
-              className="h-9 px-3 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted"
-            >
-              <LogIn className="h-3.5 w-3.5 mr-1" />
-              Sign In
-            </Button>
-          </Link>
-
-          <Link to="/signup">
-            <Button
-              size="sm"
               className="h-9 px-3.5 rounded-md bg-primary text-primary-foreground text-xs font-semibold hover:bg-primary/90 transition-colors"
             >
-              Sign Up
+              Login
             </Button>
           </Link>
         </div>
