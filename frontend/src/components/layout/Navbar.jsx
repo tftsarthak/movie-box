@@ -5,10 +5,9 @@ import { Button } from "@/components/ui/button";
 
 export const Navbar = () => {
   const navLinkClass = ({ isActive }) =>
-    `text-sm font-medium transition-colors px-3 py-1.5 rounded-md ${
-      isActive
-        ? "text-foreground bg-muted font-semibold"
-        : "text-muted-foreground hover:text-foreground hover:bg-muted/60"
+    `text-sm font-medium transition-colors px-3 py-1.5 rounded-md ${isActive
+      ? "text-foreground bg-muted font-semibold"
+      : "text-muted-foreground hover:text-foreground hover:bg-muted/60"
     }`;
 
   return (

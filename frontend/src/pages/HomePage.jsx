@@ -12,30 +12,28 @@ export const HomePage = () => {
   const [error, setError] = useState(null);
 
   useEffect(() => {
-    let ignore = false;
+    const controller = new AbortController();
 
     async function loadData() {
       try {
         const [dailyRes, weeklyRes] = await Promise.all([
-          getTrendingMovies("day", 1),
-          getTrendingMovies("week", 1),
+          getTrendingMovies("day", 1, { signal: controller.signal }),
+          getTrendingMovies("week", 1, { signal: controller.signal }),
         ]);
 
-        if (!ignore) {
-          const dailyList = dailyRes?.results || [];
-          const weeklyList = weeklyRes?.results || [];
+        const dailyList = dailyRes?.results || [];
+        const weeklyList = weeklyRes?.results || [];
 
-          setDailyTrending(dailyList);
-          setWeeklyTrending(weeklyList);
+        setDailyTrending(dailyList);
+        setWeeklyTrending(weeklyList);
 
-          // Select featured spotlight movie with valid backdrop & poster
-          const featured =
-            dailyList.find((m) => m.backdrop_path && m.poster_path) || dailyList[0];
-          setHeroMovie(featured || null);
-          setIsLoading(false);
-        }
+        // Select featured spotlight movie with valid backdrop & poster
+        const featured =
+          dailyList.find((m) => m.backdrop_path && m.poster_path) || dailyList[0];
+        setHeroMovie(featured || null);
+        setIsLoading(false);
       } catch (err) {
-        if (!ignore) {
+        if (!err.isCanceled) {
           console.error("Error fetching homepage trending data:", err);
           setError(err.message || "Failed to load trending movies. Please try again.");
           setIsLoading(false);
@@ -46,7 +44,7 @@ export const HomePage = () => {
     loadData();
 
     return () => {
-      ignore = true;
+      controller.abort();
     };
   }, []);
 
