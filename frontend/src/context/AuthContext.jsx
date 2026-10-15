@@ -1,6 +1,6 @@
 import { createContext, useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "react-hot-toast";
-import { getTmdbAccount, initiateTmdbAuth, logoutTmdb } from "@/api/authApi";
+import { initiateTmdbAuth, getTmdbAccount, logoutTmdb } from "@/api/authApi";
 
 export const AuthContext = createContext({
   user: null,
@@ -59,8 +59,25 @@ export const AuthProvider = ({ children }) => {
   }, []);
 
   /**
-   * Initiates TMDB OAuth flow and redirects the browser to TMDB.
+   * Initiates TMDB OAuth flow via direct backend redirect with ?redirect=true.
+   * This guarantees first-party cookie creation on localhost:3000 and clean 302 navigation to TMDB.
    */
+
+
+  // const login = useCallback(async () => {
+  //   setError(null);
+  //   try {
+  //     window.location.href = `${API_BASE_URL}/auth/tmdb/login?redirect=true`;
+  //     return true;
+  //   } catch (err) {
+  //     const message = err?.message || "Failed to initiate login";
+  //     setError(message);
+  //     toast.error(message, { id: "auth-login-error" });
+  //     throw err;
+  //   }
+  // }, []);
+
+
   const login = useCallback(async (options = {}) => {
     setError(null);
     try {
@@ -72,7 +89,7 @@ export const AuthProvider = ({ children }) => {
         throw new Error("Unable to obtain TMDB authorization URL");
       }
 
-      // Redirect user to TMDB approval page
+      // Redirect user to TMDB with the validated callbackUrl
       window.location.href = authUrl;
       return authUrl;
     } catch (err) {
@@ -86,6 +103,7 @@ export const AuthProvider = ({ children }) => {
       throw err;
     }
   }, []);
+
 
   /**
    * Logs out the user by deleting TMDB session cookies and resetting local state.

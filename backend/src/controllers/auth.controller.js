@@ -18,6 +18,13 @@ const COOKIE_OPTIONS = {
  * Route: GET /api/v1/auth/tmdb/login
  */
 export const initiateTmdbAuth = asyncHandler(async (req, res) => {
+// 1. frontend s req aai
+// 2. tmdb se token le lia
+// 3. token cookie m set kar dia 
+// 4. ek authUrl banai jo official tmdb ki h (usme ek redirect karne ki url set kardi - apne backend ka callback route)
+// 5. ye authUrl frontend ko return kardi
+// 6. ab frontend is url p redirect krega
+
     const data = await tmdbService.createRequestToken();
     const requestToken = data?.request_token;
 
@@ -26,7 +33,7 @@ export const initiateTmdbAuth = asyncHandler(async (req, res) => {
     }
 
     const appUrl = process.env.APP_URL || `http://localhost:${process.env.PORT || 3000}`;
-    const callbackUrl = `${appUrl}/api/v1/auth/tmdb/callback`;
+    const callbackUrl = `${appUrl}/api/v1/auth/tmdb/callback?redirect=true`;
 
     // 15-minute expiration for auth state token
     res.cookie("tmdb_auth_state", requestToken, {
@@ -58,6 +65,7 @@ window.location.href = res.data.data.authUrl immediately takes the real user to 
 Once approved, TMDB redirects the user back to your backend callback, which redirects to your dashboard.
 */
 
+// we use this way
     return res.status(200).json(
         new ApiResponse(
             200,
@@ -73,28 +81,7 @@ Once approved, TMDB redirects the user back to your backend callback, which redi
 Do you need to extract authUrl and do a manual redirect from frontend?
 Yes, exactly! If your frontend uses axios or fetch, you must extract authUrl and redirect manually.
 
-Here is what your React code looks like:
-
-// In your React component
-import axios from "axios";
-
-const handleLogin = async () => {
-    try {
-        // 1. Call backend (no ?redirect=true -> returns JSON)
-        const res = await axios.get("http://localhost:3000/api/v1/auth/tmdb/login", {
-            withCredentials: true // Important: preserves the auth_state cookie
-        });
-
-        // 2. Extract authUrl from response
-        const { authUrl } = res.data.data;
-
-        // 3. Manually redirect the user's browser to TMDB
-        window.location.href = authUrl;
-
-    } catch (error) {
-        console.error("Login failed:", error);
-    }
-};
+// In your React component, manually redirect via window.location.href = res.data.authUrl;
 
 */
 
@@ -107,6 +94,17 @@ const handleLogin = async () => {
 
 // iska kam h redirect karna if success - dashboard par, else - login page par with error message in query param
 export const handleTmdbCallback = asyncHandler(async (req, res) => {
+// 1. tmdb n auth karne k baad ispe redirect mara hoga
+// 2. tmdb server auto appends info as query parameters - { request_token, approved, denied }
+// 3. clear token cookie
+// 4. handle invalid states with some checks
+// 5. hit session and account id api and set them in cookies
+// 6. if everything correct - do "return res.redirect(`${clientUrl}/dashboard`);"
+
+
+// officially it comes as "request_token", but we aliased it as "callbackToken"
+// now request_token cannot be used. use - callbackToken instead.
+// callbackToken and storedToken are the same (if not same - Invalid state)
     const { request_token: callbackToken, approved, denied } = req.query;
     const storedToken = req.cookies?.tmdb_auth_state;
     const clientUrl = process.env.CLIENT_URL || process.env.CORS_ORIGIN || "http://localhost:5173";
@@ -118,7 +116,7 @@ export const handleTmdbCallback = asyncHandler(async (req, res) => {
     if (denied === "true" || approved === "false") {
         return res.redirect(`${clientUrl}/login?status=denied`);
     }
-
+    console.log("callbackToken : ", callbackToken, " storedToken : ", storedToken);
     // CSRF & State Validation
     if (!storedToken || !callbackToken || storedToken !== callbackToken) {
         return res.redirect(`${clientUrl}/login?status=invalid_state`);
@@ -150,7 +148,7 @@ export const handleTmdbCallback = asyncHandler(async (req, res) => {
         } catch (accErr) {
             console.warn("Could not pre-fetch account ID during TMDB login callback:", accErr.message);
         }
-
+        //for external OAuth callbacks, a backend redirect is mandatory.
         return res.redirect(`${clientUrl}/dashboard`);
     } catch (error) {
         console.error("Error creating TMDB session:", error?.message);
