@@ -122,9 +122,9 @@ export const Navbar = () => {
                     }}
                   />
                 ) : (
-                  <div className="flex h-7 w-7 items-center justify-center rounded-full bg-primary/10 text-primary font-bold text-[11px] border border-primary/20">
+                  <span className="flex h-7 w-7 items-center justify-center rounded-full bg-primary/10 text-primary font-bold text-[11px] border border-primary/20">
                     {initials}
-                  </div>
+                  </span>
                 )}
                 <span className="hidden sm:inline-block max-w-[100px] truncate text-foreground font-semibold">
                   {user?.username}
@@ -135,20 +135,22 @@ export const Navbar = () => {
                 align="end"
                 className="w-56 p-1.5 shadow-xl border border-border bg-popover"
               >
-                <DropdownMenuLabel className="px-2 py-1.5 font-normal">
-                  <div className="flex flex-col space-y-0.5">
-                    <p className="text-sm font-semibold text-foreground truncate">
-                      {displayName}
-                    </p>
-                    <p className="text-xs text-muted-foreground truncate">
-                      @{user?.username}
-                    </p>
-                  </div>
-                  <div className="mt-1.5 inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px] font-semibold bg-emerald-500/10 text-emerald-500 border border-emerald-500/20">
-                    <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                    TMDB Connected
-                  </div>
-                </DropdownMenuLabel>
+                <DropdownMenuGroup>
+                  <DropdownMenuLabel className="px-2 py-1.5 font-normal">
+                    <div className="flex flex-col space-y-0.5">
+                      <p className="text-sm font-semibold text-foreground truncate">
+                        {displayName}
+                      </p>
+                      <p className="text-xs text-muted-foreground truncate">
+                        @{user?.username}
+                      </p>
+                    </div>
+                    <div className="mt-1.5 inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px] font-semibold bg-emerald-500/10 text-emerald-500 border border-emerald-500/20">
+                      <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                      TMDB Connected
+                    </div>
+                  </DropdownMenuLabel>
+                </DropdownMenuGroup>
                 <DropdownMenuSeparator />
                 <DropdownMenuGroup>
                   <DropdownMenuItem
