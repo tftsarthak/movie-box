@@ -88,38 +88,199 @@ Yes, exactly! If your frontend uses axios or fetch, you must extract authUrl and
 });
 
 /**
+ * HELPER: sendAuthCallbackResponse
+ *
+ * Kyu banaya ye helper?
+ * Pehle backend seedha `res.redirect(`${clientUrl}/dashboard`)` karta tha.
+ * Lekin Pop-up window flow me agar redirect karenge, toh pop-up window ke andar hi poora dashboard khul jaayega!
+ *
+ * Isliye ab hum ek lightweight HTML response bhejte hain jo:
+ * 1. window.opener (MovieBox ki main tab) ko `window.opener.postMessage(...)` ke through signal bhejta hai.
+ * 2. window.close() call karke pop-up window ko automatically close kar deta hai.
+ * 3. FALLBACK: Agar pop-up window nahi thi (user direct URL par aaya ya window.opener severed hai),
+ *    toh script `window.location.replace(targetUrl)` karke normal redirect kar deta hai.
+ */
+const sendAuthCallbackResponse = (res, { success, status = "success", clientUrl }) => {
+    const cleanClientUrl = (clientUrl || "http://localhost:5173").replace(/\/+$/, "");
+    const redirectUrl = success
+        ? `${cleanClientUrl}/dashboard`
+        : `${cleanClientUrl}/login?status=${encodeURIComponent(status)}`;
+
+    const messagePayload = success
+        ? { type: "TMDB_AUTH_SUCCESS" }
+        : { type: "TMDB_AUTH_ERROR", status };
+
+    const serializedPayload = JSON.stringify(messagePayload);
+
+    const title = success ? "Authorization Successful" : "Authorization Notice";
+    const heading = success ? "Connected to MovieBox" : "Authorization Failed";
+    const message = success
+        ? "Your TMDB account has been linked. Closing window..."
+        : (status === "denied"
+            ? "TMDB authorization was denied. Closing window..."
+            : "Could not complete authorization. Closing window...");
+
+    const html = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>${title}</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      padding: 16px;
+      background-color: #0c0d12;
+      color: #f1f5f9;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      text-align: center;
+    }
+    .card {
+      background: #141721;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 16px;
+      padding: 32px 24px;
+      max-width: 360px;
+      width: 100%;
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.45);
+    }
+    .status-icon {
+      width: 48px;
+      height: 48px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 16px;
+      font-size: 22px;
+      font-weight: bold;
+    }
+    .status-icon.success {
+      background: rgba(16, 185, 129, 0.15);
+      color: #10b981;
+      border: 1px solid rgba(16, 185, 129, 0.3);
+    }
+    .status-icon.error {
+      background: rgba(239, 68, 68, 0.15);
+      color: #ef4444;
+      border: 1px solid rgba(239, 68, 68, 0.3);
+    }
+    h2 {
+      font-size: 18px;
+      font-weight: 700;
+      margin: 0 0 8px;
+      letter-spacing: -0.01em;
+    }
+    p {
+      font-size: 13px;
+      color: #94a3b8;
+      margin: 0 0 16px;
+      line-height: 1.5;
+    }
+    .fallback-link {
+      display: inline-block;
+      font-size: 12px;
+      color: #ff5757;
+      text-decoration: underline;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="status-icon ${success ? "success" : "error"}">
+      ${success ? "&#10003;" : "&#33;"}
+    </div>
+    <h2>${heading}</h2>
+    <p>${message}</p>
+    <a id="fallback-link" class="fallback-link" style="display:none;" href="${redirectUrl}">Click here if this window does not close automatically</a>
+  </div>
+  <script>
+    (function() {
+      var clientOrigin = ${JSON.stringify(cleanClientUrl)};
+      var payload = ${serializedPayload};
+      var targetUrl = ${JSON.stringify(redirectUrl)};
+      var hasOpener = false;
+
+      // Check karo agar ye window kisi opener (main MovieBox tab) dwara kholi gayi thi
+      try {
+        if (window.opener && window.opener !== window) {
+          hasOpener = true;
+          // Main tab ko auth result bhejo (TMDB_AUTH_SUCCESS ya TMDB_AUTH_ERROR)
+          window.opener.postMessage(payload, clientOrigin);
+        }
+      } catch (err) {
+        console.warn("postMessage to opener failed:", err);
+      }
+
+      if (hasOpener) {
+        // Pop-up window ko auto close karo thoda delay dekar taaki message deliver ho sake
+        setTimeout(function() {
+          try {
+            window.close();
+          } catch (e) {
+            console.warn("window.close failed:", e);
+          }
+          // Agar browser script ko window close karne se roke toh fallback link show karo
+          var link = document.getElementById("fallback-link");
+          if (link) link.style.display = "inline-block";
+        }, 400);
+      } else {
+        // Normal tab redirect agar pop-up nahi tha
+        window.location.replace(targetUrl);
+      }
+    })();
+  </script>
+</body>
+</html>`;
+
+    res.setHeader("Content-Type", "text/html; charset=utf-8");
+    return res.status(200).send(html);
+};
+
+/**
  * STEP 2: Handle TMDB Callback & Exchange Token for Session ID
  * Route: GET /api/v1/auth/tmdb/callback
+ *
+ * Flow:
+ * 1. User ne TMDB popup par login/approve kar diya.
+ * 2. TMDB server ne hamare backend callback route par redirect mara with query parameters: { request_token, approved, denied }
+ * 3. State token cookie clear karo (CSRF cleanup).
+ * 4. Checks lagao (denied toh nahi kiya, storedToken aur callbackToken match ho rahe hain ya nahi).
+ * 5. TMDB createSession API call karke sessionId lo aur secure cookies me save karo.
+ * 6. sendAuthCallbackResponse() call karo jo main tab ko notify karega aur popup ko close karega!
  */
-
-// iska kam h redirect karna if success - dashboard par, else - login page par with error message in query param
 export const handleTmdbCallback = asyncHandler(async (req, res) => {
-// 1. tmdb n auth karne k baad ispe redirect mara hoga
-// 2. tmdb server auto appends info as query parameters - { request_token, approved, denied }
-// 3. clear token cookie
-// 4. handle invalid states with some checks
-// 5. hit session and account id api and set them in cookies
-// 6. if everything correct - do "return res.redirect(`${clientUrl}/dashboard`);"
-
-
-// officially it comes as "request_token", but we aliased it as "callbackToken"
-// now request_token cannot be used. use - callbackToken instead.
-// callbackToken and storedToken are the same (if not same - Invalid state)
+    // officially it comes as "request_token", but we alias it as "callbackToken"
+    // callbackToken aur storedToken same hone chahiye (agar match nahi hua toh Invalid State / CSRF)
     const { request_token: callbackToken, approved, denied } = req.query;
     const storedToken = req.cookies?.tmdb_auth_state;
     const clientUrl = process.env.CLIENT_URL || process.env.CORS_ORIGIN || "http://localhost:5173";
 
-    // Clear state cookie after reading
+    // 1. Clear state cookie after reading
     res.clearCookie("tmdb_auth_state", COOKIE_OPTIONS);
 
-    // Handle user denial on TMDB page
+    // 2. Handle user denial on TMDB page (agar user ne TMDB par "Deny" dabaya)
     if (denied === "true" || approved === "false") {
-        return res.redirect(`${clientUrl}/login?status=denied`);
+        return sendAuthCallbackResponse(res, {
+            success: false,
+            status: "denied",
+            clientUrl,
+        });
     }
-    console.log("callbackToken : ", callbackToken, " storedToken : ", storedToken);
-    // CSRF & State Validation
+
+    // 3. CSRF & State Validation (verify karo ki token wahi hai jo humne login initiation par bheja tha)
     if (!storedToken || !callbackToken || storedToken !== callbackToken) {
-        return res.redirect(`${clientUrl}/login?status=invalid_state`);
+        return sendAuthCallbackResponse(res, {
+            success: false,
+            status: "invalid_state",
+            clientUrl,
+        });
     }
 
     try {
@@ -127,7 +288,11 @@ export const handleTmdbCallback = asyncHandler(async (req, res) => {
         const sessionId = sessionData?.session_id;
 
         if (!sessionId) {
-            return res.redirect(`${clientUrl}/login?status=session_failed`);
+            return sendAuthCallbackResponse(res, {
+                success: false,
+                status: "session_failed",
+                clientUrl,
+            });
         }
 
         // Store session ID in secure HTTP-only cookie (30 days)
@@ -148,16 +313,21 @@ export const handleTmdbCallback = asyncHandler(async (req, res) => {
         } catch (accErr) {
             console.warn("Could not pre-fetch account ID during TMDB login callback:", accErr.message);
         }
-        //for external OAuth callbacks, a backend redirect is mandatory.
-        return res.redirect(`${clientUrl}/dashboard`);
+
+        return sendAuthCallbackResponse(res, {
+            success: true,
+            status: "success",
+            clientUrl,
+        });
     } catch (error) {
         console.error("Error creating TMDB session:", error?.message);
 
-        if (error?.response?.data?.status_code === 17) {
-            return res.redirect(`${clientUrl}/login?status=expired`);
-        }
-
-        return res.redirect(`${clientUrl}/login?status=auth_failed`);
+        const status = error?.response?.data?.status_code === 17 ? "expired" : "auth_failed";
+        return sendAuthCallbackResponse(res, {
+            success: false,
+            status,
+            clientUrl,
+        });
     }
 });
 

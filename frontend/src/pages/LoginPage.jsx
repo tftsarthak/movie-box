@@ -61,12 +61,23 @@ export const LoginPage = () => {
     }
   }, [status]);
 
+  /**
+   * "Connect with TMDB" button click handler:
+   * 1. `setIsSubmitting(true)`: Button ko loading state me daalta hai aur TMDB pop-up guide show karta hai.
+   * 2. `await login()`: Centered 600x700 pop-up window kholta hai aur user ke approve karne ka wait karta hai.
+   * 3. Jab pop-up se success signal milta hai, user object return hota hai aur hum `/dashboard` navigate kar dete hain.
+   * 4. `finally`: Pop-up band hone ya fail hone par `isSubmitting(false)` chalega taaki button wapas normal state me aa jaye.
+   */
   const handleConnect = async () => {
     try {
       setIsSubmitting(true);
-      await login();
+      const authenticatedUser = await login();
+      if (authenticatedUser) {
+        navigate("/dashboard");
+      }
     } catch (err) {
       console.error("Login initiation failed:", err);
+    } finally {
       setIsSubmitting(false);
     }
   };
@@ -221,7 +232,7 @@ export const LoginPage = () => {
                   {isSubmitting ? (
                     <>
                       <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                      Redirecting to TMDB...
+                      Authorizing in pop-up window...
                     </>
                   ) : (
                     <>
@@ -230,6 +241,15 @@ export const LoginPage = () => {
                     </>
                   )}
                 </Button>
+
+                {isSubmitting && (
+                  <div className="rounded-lg bg-muted/60 p-3 border border-border/60 text-center space-y-1">
+                    <p className="font-semibold text-foreground text-xs">Waiting for TMDB Authorization</p>
+                    <p className="text-muted-foreground text-[11px] leading-relaxed">
+                      Please log in and approve access in the pop-up window. If you just logged into TMDB for the first time, click Approve or close the window to retry.
+                    </p>
+                  </div>
+                )}
 
                 <p className="text-[11px] text-center text-muted-foreground">
                   Don't have a TMDB account yet?{" "}
