@@ -1,84 +1,39 @@
-import { useState, useEffect } from "react";
-import { getTrendingMovies } from "@/api/movieApi";
+import { useMemo } from "react";
+import { useTrendingMovies } from "@/hooks/queries/movies";
 import { HeroBanner } from "@/components/movie/HeroBanner";
 import { MovieCarousel } from "@/components/movie/MovieCarousel";
 import { ErrorState } from "@/components/common/ErrorState";
 
 export const HomePage = () => {
-  const [dailyTrending, setDailyTrending] = useState([]);
-  const [weeklyTrending, setWeeklyTrending] = useState([]);
-  const [heroMovie, setHeroMovie] = useState(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const daily = useTrendingMovies("day");
+  const weekly = useTrendingMovies("week");
 
-  useEffect(() => {
-    const controller = new AbortController();
+  const dailyTrending = daily.data || [];
+  const weeklyTrending = weekly.data || [];
 
-    async function loadData() {
-      try {
-        const [dailyRes, weeklyRes] = await Promise.all([
-          getTrendingMovies("day", 1, { signal: controller.signal }),
-          getTrendingMovies("week", 1, { signal: controller.signal }),
-        ]);
+  const heroMovie = useMemo(() => {
+    const list = daily.data;
+    if (!list?.length) return null;
+    return list.find((m) => m.backdrop_path && m.poster_path) || list[0] || null;
+  }, [daily.data]);
 
-        const dailyList = dailyRes?.results || [];
-        const weeklyList = weeklyRes?.results || [];
-
-        setDailyTrending(dailyList);
-        setWeeklyTrending(weeklyList);
-
-        // Select featured spotlight movie with valid backdrop & poster
-        const featured =
-          dailyList.find((m) => m.backdrop_path && m.poster_path) || dailyList[0];
-        setHeroMovie(featured || null);
-        setIsLoading(false);
-      } catch (err) {
-        if (!err.isCanceled) {
-          console.error("Error fetching homepage trending data:", err);
-          setError(err.message || "Failed to load trending movies. Please try again.");
-          setIsLoading(false);
-        }
-      }
-    }
-
-    loadData();
-
-    return () => {
-      controller.abort();
-    };
-  }, []);
+  const isError = daily.isError || weekly.isError;
+  const errorMessage =
+    daily.error?.message ||
+    weekly.error?.message ||
+    "Failed to load trending movies. Please try again.";
 
   const handleRetry = () => {
-    setIsLoading(true);
-    setError(null);
-    Promise.all([
-      getTrendingMovies("day", 1),
-      getTrendingMovies("week", 1),
-    ])
-      .then(([dailyRes, weeklyRes]) => {
-        const dailyList = dailyRes?.results || [];
-        const weeklyList = weeklyRes?.results || [];
-        setDailyTrending(dailyList);
-        setWeeklyTrending(weeklyList);
-        const featured =
-          dailyList.find((m) => m.backdrop_path && m.poster_path) || dailyList[0];
-        setHeroMovie(featured || null);
-      })
-      .catch((err) => {
-        console.error("Retry error:", err);
-        setError(err.message || "Failed to load trending movies. Please try again.");
-      })
-      .finally(() => {
-        setIsLoading(false);
-      });
+    if (daily.isError) daily.refetch();
+    if (weekly.isError) weekly.refetch();
   };
 
-  if (error && dailyTrending.length === 0) {
+  if (isError && dailyTrending.length === 0 && weeklyTrending.length === 0) {
     return (
       <div className="min-h-[70vh] flex items-center justify-center px-4">
         <ErrorState
           title="Could not load trending films"
-          message={error}
+          message={errorMessage}
           onRetry={handleRetry}
         />
       </div>
@@ -88,7 +43,7 @@ export const HomePage = () => {
   return (
     <div className="min-h-screen pb-16">
       {/* Hero Spotlight */}
-      <HeroBanner movie={heroMovie} isLoading={isLoading} />
+      <HeroBanner movie={heroMovie} isLoading={daily.isLoading} />
 
       {/* Main Content Sections */}
       <div className="max-w-7xl mx-auto space-y-4 pt-4 sm:pt-6">
@@ -97,7 +52,7 @@ export const HomePage = () => {
           title="Trending Today"
           subtitle="Top movies capturing audiences worldwide today"
           movies={dailyTrending}
-          isLoading={isLoading}
+          isLoading={daily.isLoading}
           viewAllHref="/discover?sort_by=popularity.desc"
         />
 
@@ -106,7 +61,7 @@ export const HomePage = () => {
           title="Trending This Week"
           subtitle="The biggest hits and most-watched films of the week"
           movies={weeklyTrending}
-          isLoading={isLoading}
+          isLoading={weekly.isLoading}
           viewAllHref="/discover?sort_by=popularity.desc"
         />
       </div>

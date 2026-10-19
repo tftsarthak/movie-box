@@ -1,14 +1,22 @@
-import { useContext } from "react";
-import { AuthContext } from "@/context/AuthContext";
+import { useQueryClient } from "@tanstack/react-query";
+import { useUser, useLogin, useLogout, authKeys } from "@/hooks/queries/auth";
 
 export const useAuth = () => {
-  const context = useContext(AuthContext);
+  const queryClient = useQueryClient();
+  const { data: user, isLoading: loading, error: queryError } = useUser();
+  const { login, error: loginError } = useLogin();
+  const logoutMutation = useLogout();
 
-  if (!context) {
-    throw new Error("useAuth must be used within an AuthProvider");
-  }
-
-  return context;
+  return {
+    user: user ?? null,
+    isAuthenticated: Boolean(user),
+    loading,
+    error: loginError || queryError?.message || null,
+    login,
+    logout: logoutMutation.mutateAsync,
+    checkAuth: (options) => queryClient.refetchQueries({ queryKey: authKeys.user(), ...options }),
+    setUser: (userData) => queryClient.setQueryData(authKeys.user(), userData),
+  };
 };
 
 export default useAuth;
