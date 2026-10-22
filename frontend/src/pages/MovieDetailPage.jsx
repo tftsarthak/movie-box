@@ -1,4 +1,4 @@
-import { useRef } from "react";
+import { useRef, useEffect } from "react";
 import { useParams, Link, useNavigate } from "react-router";
 import { motion, useReducedMotion } from "framer-motion";
 import toast from "react-hot-toast";
@@ -106,6 +106,11 @@ export const MovieDetailPage = () => {
 
   // Parameter validation
   const isValidId = Boolean(tmdbId && /^\d+$/.test(String(tmdbId)));
+
+  // Scroll to top immediately when landing on a movie detail page or switching movies
+  useEffect(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: "instant" });
+  }, [tmdbId]);
 
   // ── Queries ───────────────────────────────────────────────────────────────
   const { isAuthenticated } = useAuth();
