@@ -1,3 +1,4 @@
+import { useEffect, useRef } from "react";
 import { useSearchParams } from "react-router";
 import { motion, useReducedMotion } from "framer-motion";
 import { SearchX } from "lucide-react";
@@ -145,6 +146,16 @@ export const DiscoverPage = () => {
     setSearchParams({}, { replace: true });
   };
 
+  // Smooth scroll to top whenever currentPage changes
+  const isFirstRender = useRef(true);
+  useEffect(() => {
+    if (isFirstRender.current) {
+      isFirstRender.current = false;
+      return;
+    }
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }, [currentPage]);
+
   // ── Select motion variants based on reduced-motion preference ───────────
   const containerMotion = prefersReducedMotion
     ? containerVariantsReduced
@@ -155,7 +166,7 @@ export const DiscoverPage = () => {
 
   // ── Render ──────────────────────────────────────────────────────────────
   return (
-    <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+    <div className="mx-auto max-w-7xl px-4 pt-8 pb-24 sm:px-6 lg:px-8">
       {/* Page Header */}
       <div className="max-w-2xl mx-auto mb-8 text-center">
         <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-foreground mb-2">
@@ -240,7 +251,7 @@ export const DiscoverPage = () => {
             currentPage={currentPage}
             totalPages={totalPages}
             onPageChange={handlePageChange}
-            disabled={discoverQuery.isFetching}
+            isFetching={discoverQuery.isFetching}
           />
         </>
       )}
