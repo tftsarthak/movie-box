@@ -22,10 +22,17 @@ import {
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
 import { useAuth } from "@/hooks/useAuth";
+import { useCognitoAuth } from "@/hooks/useCognitoAuth";
 import { TMDB_IMAGE_BASE_URL } from "@/lib/constants";
 
 export const Navbar = () => {
   const { user, isAuthenticated, loading, logout } = useAuth();
+  const {
+    isAuthenticated: isCognitoAuth,
+    email: cognitoEmail,
+    signOut: cognitoSignOut,
+    isLoading: cognitoLoading,
+  } = useCognitoAuth();
   const navigate = useNavigate();
 
   const navLinkClass = ({ isActive }) =>
@@ -37,12 +44,17 @@ export const Navbar = () => {
 
   const handleLogout = async () => {
     try {
+      if (!isCognitoAuth) {
+        navigate("/", { replace: true });
+      }
       await logout();
-      navigate("/");
     } catch (err) {
       console.error("Failed to logout:", err);
     }
   };
+
+  const hasAnyAuth = isAuthenticated || isCognitoAuth;
+  const isAuthLoading = loading || cognitoLoading;
 
   const avatarPath = user?.avatar?.tmdb?.avatar_path;
   const gravatarHash = user?.avatar?.gravatar?.hash;
@@ -52,8 +64,14 @@ export const Navbar = () => {
     ? `https://www.gravatar.com/avatar/${gravatarHash}?d=identicon`
     : null;
 
-  const displayName = user?.name?.trim() || user?.username || "Account";
-  const initials = (user?.username || "U").slice(0, 2).toUpperCase();
+  const displayName =
+    user?.name?.trim() ||
+    user?.username ||
+    cognitoEmail?.split("@")[0] ||
+    "Account";
+  const initials = (user?.username || cognitoEmail || "U")
+    .slice(0, 2)
+    .toUpperCase();
 
   return (
     <header className="sticky top-0 z-50 w-full border-b border-border bg-background/90 backdrop-blur-md transition-colors">
@@ -107,9 +125,9 @@ export const Navbar = () => {
 
           <ThemeToggle />
 
-          {loading ? (
+          {isAuthLoading ? (
             <div className="h-9 w-20 rounded-md bg-muted/60 animate-pulse border border-border/50" />
-          ) : isAuthenticated ? (
+          ) : hasAnyAuth ? (
             <DropdownMenu>
               <DropdownMenuTrigger className="flex items-center gap-2 rounded-full p-1 pl-1.5 pr-2.5 text-xs font-medium border border-border bg-card hover:bg-muted/60 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary cursor-pointer">
                 {avatarUrl ? (
@@ -126,8 +144,8 @@ export const Navbar = () => {
                     {initials}
                   </span>
                 )}
-                <span className="hidden sm:inline-block max-w-[100px] truncate text-foreground font-semibold">
-                  {user?.username}
+                <span className="hidden sm:inline-block max-w-[120px] truncate text-foreground font-semibold">
+                  {displayName}
                 </span>
                 <ChevronDown className="h-3 w-3 text-muted-foreground opacity-70" />
               </DropdownMenuTrigger>
@@ -141,13 +159,30 @@ export const Navbar = () => {
                       <p className="text-sm font-semibold text-foreground truncate">
                         {displayName}
                       </p>
-                      <p className="text-xs text-muted-foreground truncate">
-                        @{user?.username}
-                      </p>
+                      {user?.username && (
+                        <p className="text-xs text-muted-foreground truncate">
+                          @{user?.username}
+                        </p>
+                      )}
+                      {cognitoEmail && (
+                        <p className="text-[11px] text-muted-foreground truncate">
+                          {cognitoEmail}
+                        </p>
+                      )}
                     </div>
-                    <div className="mt-1.5 inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px] font-semibold bg-emerald-500/10 text-emerald-500 border border-emerald-500/20">
-                      <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                      TMDB Connected
+                    <div className="mt-1.5 flex flex-wrap gap-1">
+                      {isCognitoAuth && (
+                        <span className="inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px] font-semibold bg-primary/10 text-primary border border-primary/20">
+                          <span className="h-1.5 w-1.5 rounded-full bg-primary" />
+                          MovieBox Account
+                        </span>
+                      )}
+                      {isAuthenticated && (
+                        <span className="inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px] font-semibold bg-emerald-500/10 text-emerald-500 border border-emerald-500/20">
+                          <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                          TMDB Connected
+                        </span>
+                      )}
                     </div>
                   </DropdownMenuLabel>
                 </DropdownMenuGroup>
@@ -173,14 +208,25 @@ export const Navbar = () => {
                   </DropdownMenuItem>
                 </DropdownMenuGroup>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem
-                  variant="destructive"
-                  className="cursor-pointer text-destructive focus:bg-destructive/10 focus:text-destructive"
-                  onClick={handleLogout}
-                >
-                  <LogOut className="h-4 w-4 mr-2" />
-                  <span>Log Out</span>
-                </DropdownMenuItem>
+                {isCognitoAuth && (
+                  <DropdownMenuItem
+                    variant="destructive"
+                    className="cursor-pointer text-destructive focus:bg-destructive/10 focus:text-destructive"
+                    onClick={cognitoSignOut}
+                  >
+                    <LogOut className="h-4 w-4 mr-2" />
+                    <span>Sign Out of MovieBox</span>
+                  </DropdownMenuItem>
+                )}
+                {isAuthenticated && (
+                  <DropdownMenuItem
+                    className="cursor-pointer text-muted-foreground hover:text-foreground"
+                    onClick={handleLogout}
+                  >
+                    <LogOut className="h-4 w-4 mr-2" />
+                    <span>Disconnect TMDB</span>
+                  </DropdownMenuItem>
+                )}
               </DropdownMenuContent>
             </DropdownMenu>
           ) : (
@@ -190,7 +236,7 @@ export const Navbar = () => {
                 className="h-9 px-3.5 rounded-md bg-primary text-primary-foreground text-xs font-semibold hover:bg-primary/90 transition-colors shadow-sm"
               >
                 <LogIn className="h-3.5 w-3.5 mr-1.5" />
-                Connect TMDB
+                Sign In
               </Button>
             </Link>
           )}

@@ -12,16 +12,24 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/hooks/useAuth";
+import { useCognitoAuth } from "@/hooks/useCognitoAuth";
 import { TMDB_IMAGE_BASE_URL } from "@/lib/constants";
 
 export const DashboardPage = () => {
   const { user, logout } = useAuth();
+  const {
+    isAuthenticated: isCognitoAuth,
+    email: cognitoEmail,
+    signOut: cognitoSignOut,
+  } = useCognitoAuth();
   const navigate = useNavigate();
 
   const handleLogout = async () => {
     try {
+      if (!isCognitoAuth) {
+        navigate("/", { replace: true });
+      }
       await logout();
-      navigate("/");
     } catch (err) {
       console.error("Logout error:", err);
     }
@@ -35,8 +43,14 @@ export const DashboardPage = () => {
     ? `https://www.gravatar.com/avatar/${gravatarHash}?d=identicon`
     : null;
 
-  const displayName = user?.name?.trim() || user?.username || "Account";
-  const initials = (user?.username || "U").slice(0, 2).toUpperCase();
+  const displayName =
+    user?.name?.trim() ||
+    user?.username ||
+    cognitoEmail?.split("@")[0] ||
+    "MovieBox User";
+  const initials = (user?.username || cognitoEmail || "U")
+    .slice(0, 2)
+    .toUpperCase();
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
@@ -79,56 +93,96 @@ export const DashboardPage = () => {
                 <h1 className="text-2xl font-bold tracking-tight text-foreground">
                   {displayName}
                 </h1>
-                <Badge
-                  variant="outline"
-                  className="text-xs text-emerald-500 border-emerald-500/20 bg-emerald-500/5 font-semibold"
-                >
-                  <Sparkles className="h-3 w-3 mr-1" />
-                  TMDB Verified
-                </Badge>
+                {isCognitoAuth && (
+                  <Badge
+                    variant="outline"
+                    className="text-xs text-primary border-primary/20 bg-primary/10 font-semibold"
+                  >
+                    <ShieldCheck className="h-3 w-3 mr-1" />
+                    MovieBox Account
+                  </Badge>
+                )}
+                {user?.id && (
+                  <Badge
+                    variant="outline"
+                    className="text-xs text-emerald-500 border-emerald-500/20 bg-emerald-500/5 font-semibold"
+                  >
+                    <Sparkles className="h-3 w-3 mr-1" />
+                    TMDB Verified
+                  </Badge>
+                )}
               </div>
 
-              <p className="text-sm text-muted-foreground">
-                @{user?.username} • TMDB ID:{" "}
-                <span className="font-mono text-foreground font-semibold">
-                  #{user?.id}
-                </span>
-              </p>
+              {cognitoEmail && (
+                <p className="text-xs text-muted-foreground">
+                  Email: <span className="font-medium text-foreground">{cognitoEmail}</span>
+                </p>
+              )}
+
+              {user?.username ? (
+                <p className="text-sm text-muted-foreground">
+                  @{user.username} • TMDB ID:{" "}
+                  <span className="font-mono text-foreground font-semibold">
+                    #{user.id}
+                  </span>
+                </p>
+              ) : (
+                <p className="text-xs text-muted-foreground">
+                  TMDB not linked. Connect TMDB from the login page to sync your cloud watchlist.
+                </p>
+              )}
 
               <div className="flex flex-wrap items-center justify-center sm:justify-start gap-x-4 gap-y-1 text-xs text-muted-foreground pt-1">
                 {user?.iso_3166_1 && <span>Region: {user.iso_3166_1}</span>}
                 {user?.iso_639_1 && <span>Language: {user.iso_639_1.toUpperCase()}</span>}
-                <span>
-                  Adult Content: {user?.include_adult ? "Allowed" : "Filtered"}
-                </span>
+                {user?.include_adult !== undefined && (
+                  <span>
+                    Adult Content: {user?.include_adult ? "Allowed" : "Filtered"}
+                  </span>
+                )}
               </div>
             </div>
 
             {/* Actions */}
-            <div className="flex items-center gap-2 shrink-0">
-              <a
-                href={`https://www.themoviedb.org/u/${user?.username}`}
-                target="_blank"
-                rel="noopener noreferrer"
-              >
+            <div className="flex flex-wrap items-center justify-center sm:justify-end gap-2 shrink-0">
+              {user?.username && (
+                <a
+                  href={`https://www.themoviedb.org/u/${user.username}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="text-xs border-border bg-card hover:bg-muted"
+                  >
+                    <ExternalLink className="h-3.5 w-3.5 mr-1.5" />
+                    TMDB Profile
+                  </Button>
+                </a>
+              )}
+              {isCognitoAuth && (
                 <Button
                   variant="outline"
                   size="sm"
-                  className="text-xs border-border bg-card hover:bg-muted"
+                  onClick={cognitoSignOut}
+                  className="text-xs hover:text-destructive hover:bg-destructive/10 hover:border-destructive/30"
                 >
-                  <ExternalLink className="h-3.5 w-3.5 mr-1.5" />
-                  TMDB Profile
+                  <LogOut className="h-3.5 w-3.5 mr-1.5" />
+                  Sign Out of MovieBox
                 </Button>
-              </a>
-              <Button
-                variant="destructive"
-                size="sm"
-                onClick={handleLogout}
-                className="text-xs"
-              >
-                <LogOut className="h-3.5 w-3.5 mr-1.5" />
-                Logout
-              </Button>
+              )}
+              {user && (
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  onClick={handleLogout}
+                  className="text-xs"
+                >
+                  <LogOut className="h-3.5 w-3.5 mr-1.5" />
+                  Disconnect TMDB
+                </Button>
+              )}
             </div>
           </div>
         </div>

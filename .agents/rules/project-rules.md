@@ -21,7 +21,7 @@ description: Core project rules, stack, architecture conventions, security bound
 - **Frontend:** React, Vite, React Router, Tailwind CSS
 - **Auth & External:** JWT, TMDB API (via backend only)
 - **Language/Package Manager:** Pure JavaScript, npm
-- **Frontend versions (verify against package.json):** react ^19.2.8, react-dom ^19.2.8, react-router ^8.4.0, axios ^1.20.0, tailwindcss ^4.3.3 + @tailwindcss/vite, shadcn ^4.21.3 on **Base UI** (@base-ui/react ^1.8.0), tw-animate-css ^1.4.0, framer-motion ^14.1.0, react-hot-toast ^2.6.1, vite ^8.3.0, npm.
+- **Frontend versions (verify against package.json):** react ^19.2.8, react-dom ^19.2.8, react-router ^8.4.0, axios ^1.20.0, tailwindcss ^4.3.3 + @tailwindcss/vite, shadcn ^4.21.3 on **Base UI** (@base-ui/react ^1.8.0, @tanstack/react-query ^5.104.3, tw-animate-css ^1.4.0, framer-motion ^14.1.0, react-hot-toast ^2.6.1, vite ^8.3.0, npm.
 - These versions may be newer than your training knowledge. When unsure of an API, read the installed package's types/README in `node_modules` or the existing code. Do not guess from older versions.
 - Do NOT introduce TypeScript, Prisma, alternative ORMs, or additional databases unless explicitly requested.
 

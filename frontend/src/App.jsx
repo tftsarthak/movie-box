@@ -6,6 +6,7 @@ import { SearchPage } from "@/pages/SearchPage";
 import { DiscoverPage } from "@/pages/DiscoverPage";
 import { MovieDetailPage } from "@/pages/MovieDetailPage";
 import { LoginPage } from "@/pages/LoginPage";
+import { CallbackPage } from "@/pages/CallbackPage";
 import { NotFoundPage } from "@/pages/NotFoundPage";
 import { DashboardPage } from "@/pages/DashboardPage";
 
@@ -20,6 +21,7 @@ function App() {
           <Route path="/discover" element={<DiscoverPage />} />
           <Route path="/movie/:tmdbId" element={<MovieDetailPage />} />
           <Route path="/login" element={<LoginPage />} />
+          <Route path="/callback" element={<CallbackPage />} />
 
           {/* Protected Routes */}
           <Route element={<ProtectedRoute />}>

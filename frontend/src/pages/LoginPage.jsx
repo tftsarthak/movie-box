@@ -15,10 +15,18 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/hooks/useAuth";
+import { useCognitoAuth } from "@/hooks/useCognitoAuth";
 import { TMDB_IMAGE_BASE_URL } from "@/lib/constants";
 
 export const LoginPage = () => {
   const { user, isAuthenticated, loading: authLoading, login, logout } = useAuth();
+  const {
+    isAuthenticated: isCognitoAuth,
+    email: cognitoEmail,
+    signIn: cognitoSignIn,
+    signOut: cognitoSignOut,
+    isLoading: cognitoLoading,
+  } = useCognitoAuth();
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -132,7 +140,7 @@ export const LoginPage = () => {
         {/* Main Login / Profile Card */}
         <div className="rounded-2xl border border-border bg-card/80 backdrop-blur-md p-6 sm:p-8 shadow-xl relative overflow-hidden">
           {/* Subtle Ambient Light Glow */}
-          <div className="absolute -top-24 -right-24 h-48 w-48 rounded-full bg-gradient-to-br from-[#ff5757]/20 to-[#a1131a]/10 blur-3xl pointer-events-none" />
+          {/* <div className="absolute -top-24 -right-24 h-48 w-48 rounded-full bg-gradient-to-br from-[#ff5757]/20 to-[#a1131a]/10 blur-3xl pointer-events-none" /> */}
 
           {authLoading ? (
             <div className="py-12 flex flex-col items-center justify-center gap-3 text-muted-foreground">
@@ -199,35 +207,104 @@ export const LoginPage = () => {
                   <Film className="h-6 w-6" />
                 </div>
                 <h1 className="text-2xl font-bold tracking-tight text-foreground">
-                  Connect to MovieBox
+                  Welcome to MovieBox
                 </h1>
                 <p className="text-xs text-muted-foreground max-w-xs mx-auto">
-                  Seamlessly sync your watchlist and favorites across devices powered directly by your TMDB account.
+                  Sign in to your MovieBox account or connect TMDB to sync your cloud watchlist and favorites.
                 </p>
+              </div>
+
+              {/* AWS Cognito OIDC Authentication Section */}
+              <div className="rounded-xl border border-primary/20 bg-primary/5 p-4 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <ShieldCheck className="h-4 w-4 text-primary" />
+                    <span className="text-xs font-semibold text-foreground">
+                      MovieBox Account (AWS Cognito)
+                    </span>
+                  </div>
+                  {isCognitoAuth && (
+                    <Badge variant="outline" className="text-[10px] text-emerald-500 border-emerald-500/20 bg-emerald-500/10">
+                      Active
+                    </Badge>
+                  )}
+                </div>
+
+                {isCognitoAuth ? (
+                  <div className="flex items-center justify-between gap-3 pt-1">
+                    <div className="text-xs truncate">
+                      <p className="text-muted-foreground text-[11px]">Signed in as:</p>
+                      <p className="font-semibold text-foreground truncate max-w-[200px]">
+                        {cognitoEmail}
+                      </p>
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={cognitoSignOut}
+                      className="h-8 text-xs text-muted-foreground hover:text-destructive hover:bg-destructive/10 hover:border-destructive/30 shrink-0"
+                    >
+                      <LogOut className="h-3.5 w-3.5 mr-1.5" />
+                      Sign Out
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="space-y-2 pt-1">
+                    <Button
+                      onClick={cognitoSignIn}
+                      disabled={cognitoLoading}
+                      className="w-full h-10 text-xs font-semibold rounded-lg bg-primary hover:bg-primary/90 text-primary-foreground shadow-md transition-all active:scale-[0.99] cursor-pointer"
+                    >
+                      {cognitoLoading ? (
+                        <>
+                          <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                          Redirecting to Cognito...
+                        </>
+                      ) : (
+                        <>
+                          <ShieldCheck className="h-4 w-4 mr-2" />
+                          Sign In with MovieBox (Cognito)
+                        </>
+                      )}
+                    </Button>
+                    <p className="text-[10px] text-center text-muted-foreground">
+                      Official email & password authorization powered by AWS Cognito OIDC.
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              {/* Visual Divider */}
+              <div className="relative my-2">
+                <div className="absolute inset-0 flex items-center">
+                  <div className="w-full border-t border-border/70" />
+                </div>
+                <div className="relative flex justify-center text-[10px] uppercase">
+                  <span className="bg-card px-2.5 text-muted-foreground font-semibold tracking-wider">
+                    Or Connect TMDB
+                  </span>
+                </div>
               </div>
 
               {/* Feature Highlights */}
               <div className="space-y-2.5 rounded-xl bg-muted/40 p-4 border border-border/50 text-xs text-muted-foreground">
                 <div className="flex items-center gap-2.5 text-foreground">
                   <Heart className="h-4 w-4 text-rose-500 shrink-0" />
-                  <span>Sync and manage personal favorites</span>
+                  <span>Sync and manage personal TMDB favorites</span>
                 </div>
                 <div className="flex items-center gap-2.5 text-foreground">
                   <Bookmark className="h-4 w-4 text-amber-500 shrink-0" />
-                  <span>Access your watchlist anywhere</span>
-                </div>
-                <div className="flex items-center gap-2.5 text-foreground">
-                  <ShieldCheck className="h-4 w-4 text-emerald-500 shrink-0" />
-                  <span>Official TMDB OAuth — no passwords stored</span>
+                  <span>Access your TMDB watchlist anywhere</span>
                 </div>
               </div>
 
-              {/* Connect CTA */}
+              {/* Connect TMDB CTA */}
               <div className="space-y-3 pt-1">
                 <Button
                   onClick={handleConnect}
                   disabled={isSubmitting}
-                  className="w-full h-11 text-xs font-semibold rounded-lg bg-primary hover:bg-primary/90 text-primary-foreground shadow-md transition-all active:scale-[0.99] cursor-pointer"
+                  variant="outline"
+                  className="w-full h-11 text-xs font-semibold rounded-lg border-border hover:bg-muted/80 text-foreground shadow-sm transition-all active:scale-[0.99] cursor-pointer"
                 >
                   {isSubmitting ? (
                     <>
@@ -246,7 +323,7 @@ export const LoginPage = () => {
                   <div className="rounded-lg bg-muted/60 p-3 border border-border/60 text-center space-y-1">
                     <p className="font-semibold text-foreground text-xs">Waiting for TMDB Authorization</p>
                     <p className="text-muted-foreground text-[11px] leading-relaxed">
-                      Please log in and approve access in the pop-up window. If you just logged into TMDB for the first time, click Approve or close the window to retry.
+                      Please log in and approve access in the pop-up window.
                     </p>
                   </div>
                 )}
@@ -282,3 +359,4 @@ export const LoginPage = () => {
 };
 
 export default LoginPage;
+  

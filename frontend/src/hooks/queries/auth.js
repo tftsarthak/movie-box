@@ -10,7 +10,7 @@ export const authKeys = {
   user: () => [...authKeys.all(), "user"],
 };
 
-// ─── User Query ─────────────────────────────────────────────────────────────
+// ─── User Query ────────────────────────────────────────────────────────────
 /**
  * Query for the currently authenticated TMDB user profile.
  * Stale time is Infinity because user state changes strictly through explicit login/logout.
