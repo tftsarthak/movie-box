@@ -1,14 +1,20 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useSearchParams } from "react-router";
-import { motion, useReducedMotion } from "framer-motion";
-import { SearchX } from "lucide-react";
+import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
+import { SearchX, Compass } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { useMovieGenres, useDiscoverMovies } from "@/hooks/queries/movies";
+import { Badge } from "@/components/ui/badge";
+import {
+  useMovieGenres,
+  useDiscoverMovies,
+  useTrendingMovies,
+} from "@/hooks/queries/movies";
 import { MovieCard, MovieCardSkeleton } from "@/components/movie/MovieCard";
 import { FilterBar } from "@/components/movie/FilterBar";
 import { PaginationBar } from "@/components/movie/PaginationBar";
 import { ErrorState } from "@/components/common/ErrorState";
 import { EmptyState } from "@/components/common/EmptyState";
+import { TMDB_IMAGE_BASE_URL } from "@/lib/constants";
 
 /** Default sort when none is specified in the URL */
 const DEFAULT_SORT = "popularity.desc";
@@ -104,9 +110,11 @@ export const DiscoverPage = () => {
   // ── Queries ─────────────────────────────────────────────────────────────
   const genresQuery = useMovieGenres();
   const discoverQuery = useDiscoverMovies(filters, currentPage);
+  const trendingQuery = useTrendingMovies("day");
 
   const genres = genresQuery.data ?? [];
   const movies = discoverQuery.data?.results ?? [];
+  const trendingMovies = trendingQuery.data ?? [];
   const totalPages = discoverQuery.data?.total_pages ?? 0;
   const totalResults = discoverQuery.data?.total_results;
 
@@ -114,6 +122,23 @@ export const DiscoverPage = () => {
     selectedGenre !== "" ||
     selectedYear !== "" ||
     selectedSort !== DEFAULT_SORT;
+
+  // ── Ambient Background Crossfade ──────────────────────────────────────────
+  const backdropCandidates = trendingMovies.filter((m) => Boolean(m.backdrop_path));
+  const [backdropIndex, setBackdropIndex] = useState(0);
+
+  useEffect(() => {
+    if (backdropCandidates.length <= 1) return;
+    const timer = setInterval(() => {
+      setBackdropIndex((prev) => (prev + 1) % Math.min(backdropCandidates.length, 6));
+    }, 7000);
+    return () => clearInterval(timer);
+  }, [backdropCandidates.length]);
+
+  const currentBackdropPath = backdropCandidates[backdropIndex]?.backdrop_path;
+  const currentBackdropUrl = currentBackdropPath
+    ? `${TMDB_IMAGE_BASE_URL.backdropOriginal}${currentBackdropPath}`
+    : null;
 
   // ── URL param updaters ──────────────────────────────────────────────────
   const updateParams = (updates) => {
@@ -166,95 +191,172 @@ export const DiscoverPage = () => {
 
   // ── Render ──────────────────────────────────────────────────────────────
   return (
-    <div className="mx-auto max-w-7xl px-4 pt-8 pb-24 sm:px-6 lg:px-8">
-      {/* Page Header */}
-      <div className="max-w-2xl mx-auto mb-8 text-center">
-        <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-foreground mb-2">
-          Discover Movies
-        </h1>
-        <p className="text-sm text-muted-foreground">
-          Explore the catalog by genre, release year, or sort by popularity and
-          rating.
-        </p>
+    <div className="relative min-h-[calc(100vh-3.5rem)] overflow-hidden">
+      {/* ── Dynamic Ambient Cinematic Backdrop ────────────────────────────── */}
+      <div className="fixed inset-0 pointer-events-none overflow-hidden z-0">
+        <AnimatePresence mode="wait">
+          {currentBackdropUrl && (
+            <motion.img
+              key={currentBackdropUrl}
+              src={currentBackdropUrl}
+              alt=""
+              aria-hidden="true"
+              initial={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, scale: 1.05 }}
+              animate={{
+                opacity: 0.12,
+                scale: 1,
+              }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 1.6, ease: "easeInOut" }}
+              className="absolute inset-0 h-full w-full object-cover object-center filter brightness-90 saturate-125 select-none"
+            />
+          )}
+        </AnimatePresence>
+
+        {/* Cinematic Vignettes & Radial Glows */}
+        <div className="absolute inset-0 bg-gradient-to-b from-background/90 via-background/70 to-background" />
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_80%_60%_at_50%_0%,rgba(225,29,72,0.12),transparent_70%)]" />
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_60%_50%_at_50%_100%,rgba(0,0,0,0.85),transparent)]" />
       </div>
 
-      {/* Filter Bar */}
-      <div className="mb-6">
-        <FilterBar
-          genres={genres}
-          selectedGenre={selectedGenre}
-          selectedYear={selectedYear}
-          selectedSort={selectedSort}
-          onGenreChange={handleGenreChange}
-          onYearChange={handleYearChange}
-          onSortChange={handleSortChange}
-          onReset={handleReset}
-          hasActiveFilters={hasActiveFilters}
-          isFetching={discoverQuery.isFetching && !discoverQuery.isLoading}
-          totalResults={totalResults}
-        />
-      </div>
+      {/* ── Foreground Main Container ──────────────────────────────────────── */}
+      <div className="relative z-10 mx-auto max-w-7xl px-4 pt-8 pb-24 sm:px-6 lg:px-8">
+        {/* Page Header */}
+        <div className="max-w-2xl mx-auto mb-8 text-center">
+          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-rose-500/10 border border-rose-500/20 text-rose-500 text-xs font-semibold mb-3 backdrop-blur-md shadow-xs">
+            <Compass className="h-3.5 w-3.5" />
+            <span>Catalog Explorer</span>
+          </div>
+          <h1 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold tracking-tight text-foreground mb-3 drop-shadow-sm">
+            Discover Movies
+          </h1>
+          <p className="text-sm sm:text-base text-muted-foreground">
+            Explore thousands of titles by genre, release year, or sort by popularity and rating.
+          </p>
+        </div>
 
-      {/* Content Area */}
-      {discoverQuery.isLoading ? (
-        <SkeletonGrid />
-      ) : discoverQuery.isError ? (
-        <ErrorState
-          title="Could not load movies"
-          message={
-            discoverQuery.error?.message ||
-            "Failed to fetch discover results. Please try again."
-          }
-          onRetry={() => discoverQuery.refetch()}
-        />
-      ) : movies.length === 0 ? (
-        <EmptyState
-          icon={SearchX}
-          title="No movies found"
-          message={
-            hasActiveFilters
-              ? "No movies match your current filters. Try adjusting or resetting them."
-              : "No movies available at this time. Please try again later."
-          }
-          action={
-            hasActiveFilters ? (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleReset}
-                className="text-xs border-border bg-card hover:bg-muted"
-              >
-                Reset Filters
-              </Button>
-            ) : null
-          }
-        />
-      ) : (
-        <>
-          {/* Movie Grid with Stagger Animation */}
-          <motion.div
-            key={`${selectedGenre}-${selectedYear}-${selectedSort}-${currentPage}`}
-            variants={containerMotion}
-            initial="hidden"
-            animate="visible"
-            className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 sm:gap-5"
-          >
-            {movies.map((movie) => (
-              <motion.div key={movie.id} variants={itemMotion}>
-                <MovieCard movie={movie} />
-              </motion.div>
-            ))}
-          </motion.div>
+        {/* Filter Bar with Ambient Glow */}
+        <div className="relative mb-8">
+          <div className="absolute -inset-1 rounded-2xl bg-gradient-to-r from-primary/20 via-rose-500/15 to-primary/20 opacity-40 blur-xl transition-all pointer-events-none" />
+          <div className="relative">
+            <FilterBar
+              genres={genres}
+              selectedGenre={selectedGenre}
+              selectedYear={selectedYear}
+              selectedSort={selectedSort}
+              onGenreChange={handleGenreChange}
+              onYearChange={handleYearChange}
+              onSortChange={handleSortChange}
+              onReset={handleReset}
+              hasActiveFilters={hasActiveFilters}
+              isFetching={discoverQuery.isFetching && !discoverQuery.isLoading}
+              totalResults={totalResults}
+            />
+          </div>
+        </div>
 
-          {/* Pagination */}
-          <PaginationBar
-            currentPage={currentPage}
-            totalPages={totalPages}
-            onPageChange={handlePageChange}
-            isFetching={discoverQuery.isFetching}
+        {/* Active Filter Indicators Bar */}
+        {hasActiveFilters && (
+          <div className="flex items-center justify-between mb-5 px-1 flex-wrap gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="text-xs text-muted-foreground font-medium">
+                Active:
+              </span>
+              {selectedGenre && (
+                <Badge
+                  variant="outline"
+                  className="text-xs font-medium px-2 py-0.5 border-border bg-card text-foreground"
+                >
+                  Genre: {genres.find((g) => String(g.id) === selectedGenre)?.name || selectedGenre}
+                </Badge>
+              )}
+              {selectedYear && (
+                <Badge
+                  variant="outline"
+                  className="text-xs font-medium px-2 py-0.5 border-border bg-card text-foreground"
+                >
+                  Year: {selectedYear}
+                </Badge>
+              )}
+              {selectedSort !== DEFAULT_SORT && (
+                <Badge
+                  variant="outline"
+                  className="text-xs font-medium px-2 py-0.5 border-border bg-card text-foreground"
+                >
+                  Sort: {selectedSort.replace(".desc", "").replace("_", " ")}
+                </Badge>
+              )}
+            </div>
+
+            {totalResults != null && (
+              <span className="text-xs text-muted-foreground font-medium ml-auto">
+                {totalResults.toLocaleString()} title{totalResults !== 1 ? "s" : ""}
+              </span>
+            )}
+          </div>
+        )}
+
+        {/* Content Area */}
+        {discoverQuery.isLoading ? (
+          <SkeletonGrid />
+        ) : discoverQuery.isError ? (
+          <ErrorState
+            title="Could not load movies"
+            message={
+              discoverQuery.error?.message ||
+              "Failed to fetch discover results. Please try again."
+            }
+            onRetry={() => discoverQuery.refetch()}
           />
-        </>
-      )}
+        ) : movies.length === 0 ? (
+          <EmptyState
+            icon={SearchX}
+            title="No movies found"
+            message={
+              hasActiveFilters
+                ? "No movies match your current filters. Try adjusting or resetting them."
+                : "No movies available at this time. Please try again later."
+            }
+            action={
+              hasActiveFilters ? (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleReset}
+                  className="text-xs border-border bg-card hover:bg-muted cursor-pointer"
+                >
+                  Reset Filters
+                </Button>
+              ) : null
+            }
+          />
+        ) : (
+          <>
+            {/* Movie Grid with Stagger Animation */}
+            <motion.div
+              key={`${selectedGenre}-${selectedYear}-${selectedSort}-${currentPage}`}
+              variants={containerMotion}
+              initial="hidden"
+              animate="visible"
+              className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 sm:gap-5"
+            >
+              {movies.map((movie) => (
+                <motion.div key={movie.id} variants={itemMotion}>
+                  <MovieCard movie={movie} />
+                </motion.div>
+              ))}
+            </motion.div>
+
+            {/* Pagination */}
+            <PaginationBar
+              currentPage={currentPage}
+              totalPages={totalPages}
+              onPageChange={handlePageChange}
+              isFetching={discoverQuery.isFetching}
+            />
+          </>
+        )}
+      </div>
     </div>
   );
 };
