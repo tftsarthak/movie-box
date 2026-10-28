@@ -5,7 +5,7 @@ import { errorHandler } from "./middlewares/errorHandler.middleware.js";
 
 connectDB()
     .then(() => {
-        app.get('/test', (req, res) => { res.send("hello world") });
+        app.get('/api/test', (req, res) => { res.send("hello world") });
         app.use(errorHandler);
         app.listen(process.env.PORT || 8000, () => {
             console.log(`⚙️ Server is running at port : ${process.env.PORT}`);
