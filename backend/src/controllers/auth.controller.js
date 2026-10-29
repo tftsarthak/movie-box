@@ -6,9 +6,10 @@ import * as tmdbService from "../services/tmdb.service.js";
 const isProduction = process.env.NODE_ENV === "production";
 
 const COOKIE_OPTIONS = {
-    httpOnly: true,
-    secure: isProduction,
-    sameSite: isProduction ? "none" : "lax",
+  httpOnly: true,
+  secure: isProduction,
+  SameSite: "lax"
+  // sameSite: isProduction ? "none" : "lax",
 };
 
 /**
@@ -18,72 +19,72 @@ const COOKIE_OPTIONS = {
  * Route: GET /api/v1/auth/tmdb/login
  */
 export const initiateTmdbAuth = asyncHandler(async (req, res) => {
-// 1. frontend s req aai
-// 2. tmdb se token le lia
-// 3. token cookie m set kar dia 
-// 4. ek authUrl banai jo official tmdb ki h (usme ek redirect karne ki url set kardi - apne backend ka callback route)
-// 5. ye authUrl frontend ko return kardi
-// 6. ab frontend is url p redirect krega
+  // 1. frontend s req aai
+  // 2. tmdb se token le lia
+  // 3. token cookie m set kar dia 
+  // 4. ek authUrl banai jo official tmdb ki h (usme ek redirect karne ki url set kardi - apne backend ka callback route)
+  // 5. ye authUrl frontend ko return kardi
+  // 6. ab frontend is url p redirect krega
 
-    const data = await tmdbService.createRequestToken();
-    const requestToken = data?.request_token;
+  const data = await tmdbService.createRequestToken();
+  const requestToken = data?.request_token;
 
-    if (!requestToken) {
-        throw new ApiError(502, "Failed to create TMDB request token");
-    }
+  if (!requestToken) {
+    throw new ApiError(502, "Failed to create TMDB request token");
+  }
 
-    const appUrl = process.env.APP_URL || `http://localhost:${process.env.PORT || 3000}`;
-    const callbackUrl = `${appUrl}/api/v1/auth/tmdb/callback?redirect=true`;
+  const appUrl = process.env.APP_URL || `http://localhost:${process.env.PORT || 3000}`;
+  const callbackUrl = `${appUrl}/api/v1/auth/tmdb/callback?redirect=true`;
 
-    // 15-minute expiration for auth state token
-    res.cookie("tmdb_auth_state", requestToken, {
-        ...COOKIE_OPTIONS,
-        maxAge: 15 * 60 * 1000,
-    });
+  // 15-minute expiration for auth state token
+  res.cookie("tmdb_auth_state", requestToken, {
+    ...COOKIE_OPTIONS,
+    maxAge: 15 * 60 * 1000,
+  });
 
-    const tmdbAuthUrl = `https://www.themoviedb.org/authenticate/${requestToken}?redirect_to=${encodeURIComponent(callbackUrl)}`;
+  const tmdbAuthUrl = `https://www.themoviedb.org/authenticate/${requestToken}?redirect_to=${encodeURIComponent(callbackUrl)}`;
 
-    /*
+  /*
 When will the backend directly redirect?
 Whenever the request URL includes the query parameter ?redirect=true.
 */
 
-    if (req.query.redirect === "true") {
-        return res.redirect(tmdbAuthUrl);
-    }
+  if (req.query.redirect === "true") {
+    return res.redirect(tmdbAuthUrl);
+  }
 
-/*
-When will you get the JSON ApiResponse?
-In all other cases — i.e., anytime ?redirect=true is not present in the URL.
-*/
+  /*
+  When will you get the JSON ApiResponse?
+  In all other cases — i.e., anytime ?redirect=true is not present in the URL.
+  */
 
-/*
-When the user clicks the button:
+  /*
+  When the user clicks the button:
+  
+  React fetches the authUrl.
+  window.location.href = res.data.data.authUrl immediately takes the real user to the TMDB website to approve access.
+  Once approved, TMDB redirects the user back to your backend callback, which redirects to your dashboard.
+  */
 
-React fetches the authUrl.
-window.location.href = res.data.data.authUrl immediately takes the real user to the TMDB website to approve access.
-Once approved, TMDB redirects the user back to your backend callback, which redirects to your dashboard.
-*/
+  // we use this way
+  return res.status(200).json(
+    new ApiResponse(
+      200,
+      {
+        request_token: requestToken,
+        authUrl: tmdbAuthUrl,
+      },
+      "TMDB request token generated successfully"
+    )
+  );
 
-// we use this way
-    return res.status(200).json(
-        new ApiResponse(
-            200,
-            {
-                request_token: requestToken,
-                authUrl: tmdbAuthUrl,
-            },
-            "TMDB request token generated successfully"
-        )
-    );
-
-/* 
-Do you need to extract authUrl and do a manual redirect from frontend?
-Yes, exactly! If your frontend uses axios or fetch, you must extract authUrl and redirect manually.
-
-// In your React component, manually redirect via window.location.href = res.data.authUrl;
-
-*/
+  /* 
+  Do you need to extract authUrl and do a manual redirect from frontend?
+  Yes, exactly! If your frontend uses axios or fetch, you must extract authUrl and redirect manually.
+  
+  // In your React component, manually redirect via window.location.href = res.data.authUrl;
+  
+  */
 
 });
 
@@ -101,26 +102,26 @@ Yes, exactly! If your frontend uses axios or fetch, you must extract authUrl and
  *    toh script `window.location.replace(targetUrl)` karke normal redirect kar deta hai.
  */
 const sendAuthCallbackResponse = (res, { success, status = "success", clientUrl }) => {
-    const cleanClientUrl = (clientUrl || "http://localhost:5173").replace(/\/+$/, "");
-    const redirectUrl = success
-        ? `${cleanClientUrl}/dashboard`
-        : `${cleanClientUrl}/login?status=${encodeURIComponent(status)}`;
+  const cleanClientUrl = (clientUrl || "http://localhost:5173").replace(/\/+$/, "");
+  const redirectUrl = success
+    ? `${cleanClientUrl}/dashboard`
+    : `${cleanClientUrl}/login?status=${encodeURIComponent(status)}`;
 
-    const messagePayload = success
-        ? { type: "TMDB_AUTH_SUCCESS" }
-        : { type: "TMDB_AUTH_ERROR", status };
+  const messagePayload = success
+    ? { type: "TMDB_AUTH_SUCCESS" }
+    : { type: "TMDB_AUTH_ERROR", status };
 
-    const serializedPayload = JSON.stringify(messagePayload);
+  const serializedPayload = JSON.stringify(messagePayload);
 
-    const title = success ? "Authorization Successful" : "Authorization Notice";
-    const heading = success ? "Connected to MovieBox" : "Authorization Failed";
-    const message = success
-        ? "Your TMDB account has been linked. Closing window..."
-        : (status === "denied"
-            ? "TMDB authorization was denied. Closing window..."
-            : "Could not complete authorization. Closing window...");
+  const title = success ? "Authorization Successful" : "Authorization Notice";
+  const heading = success ? "Connected to MovieBox" : "Authorization Failed";
+  const message = success
+    ? "Your TMDB account has been linked. Closing window..."
+    : (status === "denied"
+      ? "TMDB authorization was denied. Closing window..."
+      : "Could not complete authorization. Closing window...");
 
-    const html = `<!DOCTYPE html>
+  const html = `<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="utf-8">
@@ -239,8 +240,8 @@ const sendAuthCallbackResponse = (res, { success, status = "success", clientUrl 
 </body>
 </html>`;
 
-    res.setHeader("Content-Type", "text/html; charset=utf-8");
-    return res.status(200).send(html);
+  res.setHeader("Content-Type", "text/html; charset=utf-8");
+  return res.status(200).send(html);
 };
 
 /**
@@ -256,79 +257,79 @@ const sendAuthCallbackResponse = (res, { success, status = "success", clientUrl 
  * 6. sendAuthCallbackResponse() call karo jo main tab ko notify karega aur popup ko close karega!
  */
 export const handleTmdbCallback = asyncHandler(async (req, res) => {
-    // officially it comes as "request_token", but we alias it as "callbackToken"
-    // callbackToken aur storedToken same hone chahiye (agar match nahi hua toh Invalid State / CSRF)
-    const { request_token: callbackToken, approved, denied } = req.query;
-    const storedToken = req.cookies?.tmdb_auth_state;
-    const clientUrl = process.env.CLIENT_URL || process.env.CORS_ORIGIN || "http://localhost:5173";
+  // officially it comes as "request_token", but we alias it as "callbackToken"
+  // callbackToken aur storedToken same hone chahiye (agar match nahi hua toh Invalid State / CSRF)
+  const { request_token: callbackToken, approved, denied } = req.query;
+  const storedToken = req.cookies?.tmdb_auth_state;
+  const clientUrl = process.env.CLIENT_URL || process.env.CORS_ORIGIN || "http://localhost:5173";
 
-    // 1. Clear state cookie after reading
-    res.clearCookie("tmdb_auth_state", COOKIE_OPTIONS);
+  // 1. Clear state cookie after reading
+  res.clearCookie("tmdb_auth_state", COOKIE_OPTIONS);
 
-    // 2. Handle user denial on TMDB page (agar user ne TMDB par "Deny" dabaya)
-    if (denied === "true" || approved === "false") {
-        return sendAuthCallbackResponse(res, {
-            success: false,
-            status: "denied",
-            clientUrl,
-        });
+  // 2. Handle user denial on TMDB page (agar user ne TMDB par "Deny" dabaya)
+  if (denied === "true" || approved === "false") {
+    return sendAuthCallbackResponse(res, {
+      success: false,
+      status: "denied",
+      clientUrl,
+    });
+  }
+
+  // 3. CSRF & State Validation (verify karo ki token wahi hai jo humne login initiation par bheja tha)
+  if (!storedToken || !callbackToken || storedToken !== callbackToken) {
+    return sendAuthCallbackResponse(res, {
+      success: false,
+      status: "invalid_state",
+      clientUrl,
+    });
+  }
+
+  try {
+    const sessionData = await tmdbService.createSession(callbackToken);
+    const sessionId = sessionData?.session_id;
+
+    if (!sessionId) {
+      return sendAuthCallbackResponse(res, {
+        success: false,
+        status: "session_failed",
+        clientUrl,
+      });
     }
 
-    // 3. CSRF & State Validation (verify karo ki token wahi hai jo humne login initiation par bheja tha)
-    if (!storedToken || !callbackToken || storedToken !== callbackToken) {
-        return sendAuthCallbackResponse(res, {
-            success: false,
-            status: "invalid_state",
-            clientUrl,
-        });
-    }
+    // Store session ID in secure HTTP-only cookie (30 days)
+    res.cookie("tmdb_session_id", sessionId, {
+      ...COOKIE_OPTIONS,
+      maxAge: 30 * 24 * 60 * 60 * 1000,
+    });
 
+    // Pre-fetch and cache account ID in cookie to avoid round-trips for account-scoped operations
     try {
-        const sessionData = await tmdbService.createSession(callbackToken);
-        const sessionId = sessionData?.session_id;
-
-        if (!sessionId) {
-            return sendAuthCallbackResponse(res, {
-                success: false,
-                status: "session_failed",
-                clientUrl,
-            });
-        }
-
-        // Store session ID in secure HTTP-only cookie (30 days)
-        res.cookie("tmdb_session_id", sessionId, {
-            ...COOKIE_OPTIONS,
-            maxAge: 30 * 24 * 60 * 60 * 1000,
+      const account = await tmdbService.fetchAccountDetails(sessionId);
+      if (account?.id) {
+        res.cookie("tmdb_account_id", String(account.id), {
+          ...COOKIE_OPTIONS,
+          maxAge: 30 * 24 * 60 * 60 * 1000,
         });
-
-        // Pre-fetch and cache account ID in cookie to avoid round-trips for account-scoped operations
-        try {
-            const account = await tmdbService.fetchAccountDetails(sessionId);
-            if (account?.id) {
-                res.cookie("tmdb_account_id", String(account.id), {
-                    ...COOKIE_OPTIONS,
-                    maxAge: 30 * 24 * 60 * 60 * 1000,
-                });
-            }
-        } catch (accErr) {
-            console.warn("Could not pre-fetch account ID during TMDB login callback:", accErr.message);
-        }
-
-        return sendAuthCallbackResponse(res, {
-            success: true,
-            status: "success",
-            clientUrl,
-        });
-    } catch (error) {
-        console.error("Error creating TMDB session:", error?.message);
-
-        const status = error?.response?.data?.status_code === 17 ? "expired" : "auth_failed";
-        return sendAuthCallbackResponse(res, {
-            success: false,
-            status,
-            clientUrl,
-        });
+      }
+    } catch (accErr) {
+      console.warn("Could not pre-fetch account ID during TMDB login callback:", accErr.message);
     }
+
+    return sendAuthCallbackResponse(res, {
+      success: true,
+      status: "success",
+      clientUrl,
+    });
+  } catch (error) {
+    console.error("Error creating TMDB session:", error?.message);
+
+    const status = error?.response?.data?.status_code === 17 ? "expired" : "auth_failed";
+    return sendAuthCallbackResponse(res, {
+      success: false,
+      status,
+      clientUrl,
+    });
+  }
 });
 
 /**
@@ -336,14 +337,14 @@ export const handleTmdbCallback = asyncHandler(async (req, res) => {
  * Route: GET /api/v1/auth/me or GET /api/v1/auth/tmdb/account
  */
 export const getTmdbAccount = asyncHandler(async (req, res) => {
-    const sessionId = req.sessionId || req.cookies?.tmdb_session_id;
+  const sessionId = req.sessionId || req.cookies?.tmdb_session_id;
 
-    if (!sessionId) {
-        throw new ApiError(401, "Unauthorized: No active TMDB session found");
-    }
+  if (!sessionId) {
+    throw new ApiError(401, "Unauthorized: No active TMDB session found");
+  }
 
-    const accountData = await tmdbService.fetchAccountDetails(sessionId);
-    return res.status(200).json(new ApiResponse(200, accountData, "TMDB user account fetched successfully"));
+  const accountData = await tmdbService.fetchAccountDetails(sessionId);
+  return res.status(200).json(new ApiResponse(200, accountData, "TMDB user account fetched successfully"));
 });
 
 /**
@@ -351,20 +352,20 @@ export const getTmdbAccount = asyncHandler(async (req, res) => {
  * Route: POST /api/v1/auth/logout
  */
 export const logoutTmdb = asyncHandler(async (req, res) => {
-    const sessionId = req.cookies?.tmdb_session_id;
+  const sessionId = req.cookies?.tmdb_session_id;
 
-    if (sessionId) {
-        try {
-            await tmdbService.deleteSession(sessionId);
-        } catch (error) {
-            console.error("Error deleting TMDB session remotely:", error?.message);
-        }
+  if (sessionId) {
+    try {
+      await tmdbService.deleteSession(sessionId);
+    } catch (error) {
+      console.error("Error deleting TMDB session remotely:", error?.message);
     }
+  }
 
-    res.clearCookie("tmdb_session_id", COOKIE_OPTIONS);
-    res.clearCookie("tmdb_account_id", COOKIE_OPTIONS);
-    res.clearCookie("tmdb_auth_state", COOKIE_OPTIONS);
+  res.clearCookie("tmdb_session_id", COOKIE_OPTIONS);
+  res.clearCookie("tmdb_account_id", COOKIE_OPTIONS);
+  res.clearCookie("tmdb_auth_state", COOKIE_OPTIONS);
 
-    // Default for React / Axios API calls (react handles redirect)
-    return res.status(200).json(new ApiResponse(200, null, "Logged out successfully"));
+  // Default for React / Axios API calls (react handles redirect)
+  return res.status(200).json(new ApiResponse(200, null, "Logged out successfully"));
 });

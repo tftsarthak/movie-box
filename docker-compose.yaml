@@ -1,0 +1,24 @@
+services:
+  movie-box:
+    image: ${DOCKER_HUB_IMAGE}
+    build:
+      context: .
+      dockerfile: ./Dockerfile
+    container_name: movie-box
+    restart: unless-stopped
+    ports:
+      # Exposes host port (defaults to 80 for HTTP domain traffic on EC2) to container internal port (defaults to 3000)
+      - "${HOST_PORT:-80}:${PORT:-3000}"
+    env_file:
+      - path: ./backend/.env
+        required: false
+      - path: ./.env
+        required: false
+    environment:
+      - NODE_ENV=production
+    logging:
+      # Production log rotation: prevents EBS disk storage from filling up
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
